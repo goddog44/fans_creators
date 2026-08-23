@@ -2,6 +2,7 @@ import type {
   User,
   Post,
   Comment as PostComment,
+  PostMedia,
   Subscription,
   Conversation,
   Message,
@@ -42,11 +43,22 @@ const mapProfile = (row: any): User => ({
 });
 
 // Helper to map database rows to Post type
+const postMediaUrl = (path: string) => supabase.storage.from('post-media').getPublicUrl(path).data.publicUrl;
+
 const mapPost = (row: any): Post => ({
   id: row.id,
   modelId: row.model_id,
   text: row.text || '',
-  media: row.media || [],
+  media: (row.post_media || []).sort((a: any, b: any) => a.position - b.position).map((media: any): PostMedia => ({
+    id: media.id,
+    type: media.media_type,
+    url: postMediaUrl(media.storage_path),
+    thumbnail: media.thumbnail_path ? postMediaUrl(media.thumbnail_path) : undefined,
+    storagePath: media.storage_path,
+    thumbnailPath: media.thumbnail_path || undefined,
+    position: media.position,
+    duration: media.duration || undefined,
+  })),
   visibility: row.visibility,
   price: row.price,
   status: row.status,
@@ -59,6 +71,16 @@ const mapPost = (row: any): Post => ({
   likedByUser: false,
   bookmarkedByUser: false,
 });
+
+const withMediaUrls = async (posts: Post[]): Promise<Post[]> => Promise.all(posts.map(async (post) => {
+  const media = await Promise.all((post.media || []).map(async (item) => {
+    if (!item.storagePath) return item;
+    const { data, error } = await supabase.storage.from('post-media').createSignedUrl(item.storagePath, 3600);
+    if (error) throw new Error(`Media access failed: ${error.message}`);
+    return { ...item, url: data.signedUrl };
+  }));
+  return { ...post, media };
+}));
 
 // Enriches a list of posts with the current user's like/bookmark state.
 // Call this after any bulk post fetch that will be rendered with PostCard.
@@ -451,23 +473,23 @@ export const contentService = {
   async getPosts(): Promise<Post[]> {
     const { data, error } = await supabase
       .from('posts')
-      .select('*')
+      .select('*, post_media(*)')
       .eq('status', 'PUBLISHED')
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
-    return withUserInteractions((data || []).map(mapPost));
+    return withUserInteractions(await withMediaUrls((data || []).map(mapPost)));
   },
 
   async getPostsByModel(modelId: string): Promise<Post[]> {
     const { data, error } = await supabase
       .from('posts')
-      .select('*')
+      .select('*, post_media(*)')
       .eq('model_id', modelId)
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
-    return withUserInteractions((data || []).map(mapPost));
+    return withUserInteractions(await withMediaUrls((data || []).map(mapPost)));
   },
 
   async getFeedPosts(userId: string): Promise<Post[]> {
@@ -479,7 +501,7 @@ export const contentService = {
 
     const modelIds = (subs || []).map((s) => s.model_id);
 
-    let query = supabase.from('posts').select('*').eq('status', 'PUBLISHED');
+    let query = supabase.from('posts').select('*, post_media(*)').eq('status', 'PUBLISHED');
 
     if (modelIds.length > 0) {
       query = query.or(`model_id.in.(${modelIds.join(',')}),visibility.eq.PUBLIC`);
@@ -490,19 +512,19 @@ export const contentService = {
     const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
-    return withUserInteractions((data || []).map(mapPost));
+    return withUserInteractions(await withMediaUrls((data || []).map(mapPost)));
   },
 
   async getById(id: string): Promise<Post | undefined> {
-    const { data, error } = await supabase.from('posts').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('posts').select('*, post_media(*)').eq('id', id).single();
 
     if (error) return undefined;
     if (!data) return undefined;
-    const [post] = await withUserInteractions([mapPost(data)]);
+    const [post] = await withUserInteractions(await withMediaUrls([mapPost(data)]));
     return post;
   },
 
-  async createPost(data: { modelId: string; text: string; visibility: Visibility; price?: number; scheduledAt?: string; media?: { type: 'IMAGE' | 'VIDEO'; url: string }[] }): Promise<Post> {
+  async createPost(data: { modelId: string; text: string; visibility: Visibility; price?: number; scheduledAt?: string; mediaFiles?: File[] }): Promise<Post> {
     const { data: post, error } = await supabase
       .from('posts')
       .insert({
@@ -512,13 +534,33 @@ export const contentService = {
         price: data.price,
         status: data.scheduledAt ? 'DRAFT' : 'PUBLISHED',
         scheduled_at: data.scheduledAt,
-        media: data.media || [],
       })
       .select()
       .single();
 
     if (error) throw new Error(error.message);
-    return mapPost(post);
+
+    try {
+      for (const [position, file] of (data.mediaFiles || []).entries()) {
+        const uploaded = await this.uploadMedia(file, data.modelId, post.id);
+        const { error: mediaError } = await supabase.from('post_media').insert({
+          post_id: post.id,
+          media_type: uploaded.type,
+          storage_path: uploaded.storagePath,
+          thumbnail_path: null,
+          position,
+          duration: uploaded.duration,
+        });
+        if (mediaError) throw new Error(mediaError.message);
+      }
+    } catch (uploadError) {
+      await supabase.from('posts').delete().eq('id', post.id);
+      throw uploadError;
+    }
+
+    const { data: completePost, error: completeError } = await supabase.from('posts').select('*, post_media(*)').eq('id', post.id).single();
+    if (completeError) throw new Error(completeError.message);
+    return (await withMediaUrls([mapPost(completePost)]))[0];
   },
 
   async updatePost(id: string, updates: Partial<Post>): Promise<Post> {
@@ -623,7 +665,7 @@ export const contentService = {
     if (error) throw new Error(error.message);
 
     const rows: any[] = (data || []).filter((r: any) => r.posts);
-    const posts = rows.map((r: any) => mapPost(r.posts));
+    const posts = await withMediaUrls(rows.map((r: any) => mapPost(r.posts)));
     return withUserInteractions(posts);
   },
 
@@ -726,9 +768,11 @@ export const contentService = {
     if (countError) throw new Error(countError.message);
   },
 
-  async uploadMedia(file: File, modelId: string): Promise<{ type: 'IMAGE' | 'VIDEO'; url: string }> {
+  async uploadMedia(file: File, modelId: string, postId?: string): Promise<{ type: 'IMAGE' | 'VIDEO'; storagePath: string; duration?: number }> {
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) throw new Error('Only images and videos are allowed');
+    if (file.size > 250 * 1024 * 1024) throw new Error('Media must be smaller than 250 MB');
     const ext = file.name.split('.').pop();
-    const path = `${modelId}/${crypto.randomUUID()}.${ext}`;
+    const path = `${modelId}/${postId || 'draft'}/${crypto.randomUUID()}.${ext}`;
 
     const { error } = await supabase.storage.from('post-media').upload(path, file, {
       cacheControl: '3600',
@@ -736,8 +780,17 @@ export const contentService = {
     });
     if (error) throw new Error(`Upload failed: ${error.message}`);
 
-    const { data } = supabase.storage.from('post-media').getPublicUrl(path);
-    return { type: file.type.startsWith('video') ? 'VIDEO' : 'IMAGE', url: data.publicUrl };
+    const type = file.type.startsWith('video') ? 'VIDEO' : 'IMAGE';
+    if (type === 'IMAGE') return { type, storagePath: path };
+
+    const duration = await new Promise<number | undefined>((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => { URL.revokeObjectURL(video.src); resolve(Number.isFinite(video.duration) ? video.duration : undefined); };
+      video.onerror = () => { URL.revokeObjectURL(video.src); resolve(undefined); };
+      video.src = URL.createObjectURL(file);
+    });
+    return { type, storagePath: path, duration };
   },
 };
 
@@ -1039,11 +1092,11 @@ export const messageService = {
       id: message.id,
       conversationId: message.conversation_id,
       senderId: message.sender_id,
-      type: message.type,
       text: message.text,
       mediaUrl: message.media_url,
       price: message.price,
       unlocked: message.unlocked,
+      type: message.type,
       read: message.read,
       createdAt: message.created_at,
     };

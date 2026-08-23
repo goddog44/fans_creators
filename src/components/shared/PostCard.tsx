@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, Share2, DollarSign, Lock, MoreHorizontal, BadgeCheck } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Share2, DollarSign, Lock, MoreHorizontal, BadgeCheck, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import type { Post, User, Comment as PostComment } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -35,8 +35,10 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
   const [showShare, setShowShare] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  const [mediaIndex, setMediaIndex] = useState(0);
+  const [fullscreenMedia, setFullscreenMedia] = useState(false);
 
-  const isLocked = (post.visibility === 'PPV' || post.visibility === 'SUBSCRIBERS') && !isSubscribed;
+  const isLocked = post.visibility !== 'PUBLIC' && !isSubscribed;
 
   const handleLike = async () => {
     if (!currentUser) {
@@ -163,7 +165,7 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
         </Link>
         <div className="flex items-center gap-2">
           {post.visibility === 'PPV' && <Badge tone="brand"><DollarSign className="w-3 h-3" /> ${post.price}</Badge>}
-          {post.visibility === 'SUBSCRIBERS' && <Badge tone="info">Subscribers</Badge>}
+          {post.visibility !== 'PUBLIC' && post.visibility !== 'PPV' && <Badge tone="info">{post.visibility}</Badge>}
           <button className="p-1.5 rounded-lg hover:bg-ink-100 transition-colors">
             <MoreHorizontal className="w-4 h-4 text-ink-400" />
           </button>
@@ -178,25 +180,43 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
         <div className="relative">
           {isLocked ? (
             <div className="relative aspect-[4/3] bg-ink-900 flex flex-col items-center justify-center">
-              <img src={post.media[0].thumbnail || post.media[0].url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-sm" />
+              <img src={post.media[0].thumbnail || post.media[0].url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-sm" loading="lazy" />
               <div className="relative z-10 text-center px-6">
                 <Lock className="w-10 h-10 text-white/80 mx-auto mb-3" />
                 <p className="text-white font-semibold mb-1">
-                  {post.visibility === 'PPV' ? `Unlock for $${post.price}` : 'Subscribers only'}
+                  {post.visibility === 'PPV' ? `Unlock for $${post.price}` : `${post.visibility} only`}
                 </p>
                 <p className="text-white/60 text-xs mb-4">Subscribe to {model?.name} to view this content</p>
                 <Button size="sm" onClick={() => onUnlock?.(post)}>
-                  {post.visibility === 'PPV' ? `Unlock for $${post.price}` : 'Subscribe'}
+                  {post.visibility === 'PPV' ? `Unlock for $${post.price}` : 'Unlock'}
                 </Button>
               </div>
             </div>
-          ) : post.media[0].type === 'VIDEO' ? (
-            <video src={post.media[0].url} controls className="w-full max-h-[600px] object-cover bg-black" />
           ) : (
-            <img src={post.media[0].url} alt="" className="w-full max-h-[600px] object-cover" />
+            <div className="relative bg-ink-950">
+              {post.media[mediaIndex].type === 'VIDEO' ? (
+                <video src={post.media[mediaIndex].url} poster={post.media[mediaIndex].thumbnail} controls preload="none" playsInline className="w-full max-h-[600px] object-contain bg-black" />
+              ) : (
+                <button type="button" onClick={() => setFullscreenMedia(true)} className="block w-full cursor-zoom-in" aria-label="Open image fullscreen">
+                  <img src={post.media[mediaIndex].url} alt="" loading="lazy" className="w-full max-h-[600px] object-contain" />
+                </button>
+              )}
+              {post.media.length > 1 && (
+                <>
+                  <button type="button" onClick={() => setMediaIndex((mediaIndex - 1 + post.media!.length) % post.media!.length)} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/55 text-white hover:bg-black/75" title="Previous media" aria-label="Previous media"><ChevronLeft className="w-5 h-5" /></button>
+                  <button type="button" onClick={() => setMediaIndex((mediaIndex + 1) % post.media!.length)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/55 text-white hover:bg-black/75" title="Next media" aria-label="Next media"><ChevronRight className="w-5 h-5" /></button>
+                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/65 px-3 py-1 text-xs font-semibold text-white">{mediaIndex + 1} / {post.media.length}</span>
+                </>
+              )}
+              {post.media[mediaIndex].type === 'IMAGE' && <button type="button" onClick={() => setFullscreenMedia(true)} className="absolute right-3 bottom-3 p-2 rounded-full bg-black/55 text-white" title="Open fullscreen" aria-label="Open fullscreen"><Maximize2 className="w-4 h-4" /></button>}
+            </div>
           )}
         </div>
       )}
+
+      <Modal open={fullscreenMedia} onClose={() => setFullscreenMedia(false)} title="Media preview" size="lg">
+        {post.media?.[mediaIndex] && <img src={post.media[mediaIndex].url} alt="" className="max-h-[75vh] w-full object-contain bg-black rounded-xl" />}
+      </Modal>
 
       {/* Actions */}
       <div className="flex items-center justify-between px-4 py-3">

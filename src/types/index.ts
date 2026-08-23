@@ -4,7 +4,7 @@ export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'BLOCKED' | 'PENDING';
 
 export type ContentStatus = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'PUBLISHED' | 'REJECTED' | 'REMOVED';
 
-export type Visibility = 'PUBLIC' | 'SUBSCRIBERS' | 'PPV';
+export type Visibility = 'PUBLIC' | 'FOLLOWERS' | 'SUBSCRIBERS' | 'VIP' | 'PPV';
 
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'PENDING';
 
@@ -66,7 +66,7 @@ export interface Post {
   id: string;
   modelId: string;
   text: string;
-  media?: { type: 'IMAGE' | 'VIDEO'; url: string; thumbnail?: string }[];
+  media?: PostMedia[];
   visibility: Visibility;
   price?: number;
   status: ContentStatus;
@@ -78,6 +78,17 @@ export interface Post {
   scheduledAt?: string;
   likedByUser?: boolean;
   bookmarkedByUser?: boolean;
+}
+
+export interface PostMedia {
+  id?: string;
+  type: 'IMAGE' | 'VIDEO';
+  url: string;
+  thumbnail?: string;
+  storagePath?: string;
+  thumbnailPath?: string;
+  position?: number;
+  duration?: number;
 }
 
 export interface Comment {

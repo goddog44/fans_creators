@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, Calendar, Eye, Lock, DollarSign, Globe, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, Globe, Users, X, GripVertical } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { PageHeader } from '@/components/shared/StatCard';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -24,8 +24,7 @@ export function ModelContent() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('ALL');
   const [formData, setFormData] = useState({ text: '', visibility: 'PUBLIC' as Visibility, price: 5, scheduledAt: '' });
-  const [mediaFile, setMediaFile] = useState<File | null>(null);
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaFiles, setMediaFiles] = useState<{ file: File; preview: string }[]>([]);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -40,24 +39,19 @@ export function ModelContent() {
     if (!user || !formData.text.trim()) return;
     setUploading(true);
     try {
-      let media;
-      if (mediaFile) {
-        const uploaded = await contentService.uploadMedia(mediaFile, user.id);
-        media = [uploaded];
-      }
       const post = await contentService.createPost({
         modelId: user.id,
         text: formData.text,
         visibility: formData.visibility,
         price: formData.visibility === 'PPV' ? formData.price : undefined,
         scheduledAt: formData.scheduledAt || undefined,
-        media,
+        mediaFiles: mediaFiles.map((item) => item.file),
       });
       setPosts((prev) => [post, ...prev]);
       setShowCreate(false);
       setFormData({ text: '', visibility: 'PUBLIC', price: 5, scheduledAt: '' });
-      setMediaFile(null);
-      setMediaPreview(null);
+      mediaFiles.forEach((item) => URL.revokeObjectURL(item.preview));
+      setMediaFiles([]);
       toast('Post created successfully');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to create post', 'error');
@@ -67,10 +61,26 @@ export function ModelContent() {
   };
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMediaFile(file);
-    setMediaPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files || []).filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
+    setMediaFiles((current) => [...current, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+    e.target.value = '';
+  };
+
+  const removeMedia = (index: number) => {
+    setMediaFiles((current) => {
+      URL.revokeObjectURL(current[index].preview);
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
+
+  const moveMedia = (from: number, to: number) => {
+    setMediaFiles((current) => {
+      if (to < 0 || to >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
   };
 
   const handleDelete = async () => {
@@ -89,7 +99,7 @@ export function ModelContent() {
 
   const filtered = filter === 'ALL' ? posts : posts.filter((p) => p.status === filter);
 
-  const visIcon = (v: string) => v === 'PPV' ? <DollarSign className="w-3.5 h-3.5" /> : v === 'SUBSCRIBERS' ? <Users className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />;
+  const visIcon = (v: string) => v === 'PPV' ? <DollarSign className="w-3.5 h-3.5" /> : v === 'PUBLIC' ? <Globe className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />;
 
   return (
     <DashboardShell navItems={navItems}>
@@ -152,7 +162,9 @@ export function ModelContent() {
             <Field label="Visibility">
               <Select value={formData.visibility} onChange={(e) => setFormData({ ...formData, visibility: e.target.value as Visibility })}>
                 <option value="PUBLIC">Public</option>
+                <option value="FOLLOWERS">Followers only</option>
                 <option value="SUBSCRIBERS">Subscribers</option>
+                <option value="VIP">VIP</option>
                 <option value="PPV">PPV (Pay-per-view)</option>
               </Select>
             </Field>
@@ -166,17 +178,22 @@ export function ModelContent() {
             <Input type="datetime-local" value={formData.scheduledAt} onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })} />
           </Field>
           <label className="block border-2 border-dashed border-ink-200 rounded-xl p-6 text-center cursor-pointer hover:border-brand-300 transition-colors">
-            <input type="file" accept="image/*,video/*" className="hidden" onChange={handleMediaSelect} />
-            {mediaPreview ? (
-              mediaFile?.type.startsWith('video') ? (
-                <video src={mediaPreview} className="max-h-48 mx-auto rounded-lg" controls />
-              ) : (
-                <img src={mediaPreview} alt="" className="max-h-48 mx-auto rounded-lg" />
-              )
-            ) : (
-              <p className="text-sm text-ink-400">Click to upload a photo or video</p>
-            )}
+            <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleMediaSelect} />
+            <p className="text-sm text-ink-500">Add photos and videos</p>
+            <p className="text-xs text-ink-400 mt-1">Select several files at once</p>
           </label>
+          {mediaFiles.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {mediaFiles.map((item, index) => (
+                <div key={`${item.file.name}-${index}`} draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', String(index))} onDragOver={(e) => e.preventDefault()} onDrop={(e) => moveMedia(Number(e.dataTransfer.getData('text/plain')), index)} className="relative aspect-square rounded-xl overflow-hidden bg-ink-100 group">
+                  {item.file.type.startsWith('video/') ? <video src={item.preview} controls preload="metadata" className="w-full h-full object-cover" /> : <img src={item.preview} alt={item.file.name} loading="lazy" className="w-full h-full object-cover" />}
+                  <span className="absolute top-2 left-2 p-1 rounded bg-black/50 text-white"><GripVertical className="w-4 h-4" /></span>
+                  <button type="button" onClick={() => removeMedia(index)} className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-danger-600" title="Remove media" aria-label="Remove media"><X className="w-4 h-4" /></button>
+                  <span className="absolute bottom-2 left-2 text-xs text-white bg-black/60 rounded px-1.5 py-0.5">{index + 1}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
 
