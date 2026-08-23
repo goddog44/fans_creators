@@ -1,0 +1,109 @@
+import type { ReactNode } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Home, Compass, CreditCard, MessageSquare, Bell, Bookmark, User, Search } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Avatar } from '@/components/ui/Avatar';
+
+const navItems = [
+  { to: '/home', label: 'Home', icon: Home },
+  { to: '/explore', label: 'Explore', icon: Compass },
+  { to: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
+  { to: '/messages', label: 'Messages', icon: MessageSquare },
+  { to: '/notifications', label: 'Alerts', icon: Bell },
+];
+
+const bottomNavItems = [
+  { to: '/home', label: 'Home', icon: Home },
+  { to: '/explore', label: 'Explore', icon: Compass },
+  { to: '/subscriptions', label: 'Subs', icon: CreditCard },
+  { to: '/messages', label: 'Messages', icon: MessageSquare },
+  { to: '/profile', label: 'Profile', icon: User },
+];
+
+export function UserShell({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  return (
+    <div className="min-h-screen bg-ink-50 pb-20 lg:pb-0">
+      {/* Top header */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-200">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <NavLink to="/home" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-sm">C</div>
+            <span className="font-display font-bold text-lg text-ink-900 hidden sm:block">CreatorHub</span>
+          </NavLink>
+
+          {/* Desktop nav */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    isActive ? 'bg-brand-50 text-brand-700' : 'text-ink-600 hover:bg-ink-100'
+                  }`
+                }
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </NavLink>
+            ))}
+            <NavLink to="/bookmarks" className={({ isActive }) =>
+              `flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                isActive ? 'bg-brand-50 text-brand-700' : 'text-ink-600 hover:bg-ink-100'
+              }`
+            }>
+              <Bookmark className="w-4 h-4" />
+              Bookmarks
+            </NavLink>
+          </nav>
+
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/explore')} className="p-2 rounded-lg hover:bg-ink-100 transition-colors lg:hidden">
+              <Search className="w-5 h-5 text-ink-600" />
+            </button>
+            <button onClick={() => navigate('/notifications')} className="relative p-2 rounded-lg hover:bg-ink-100 transition-colors lg:hidden">
+              <Bell className="w-5 h-5 text-ink-600" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full" />
+            </button>
+            <button onClick={() => navigate('/profile')} className="lg:hidden">
+              <Avatar src={user?.avatar || ''} size="sm" />
+            </button>
+            <button onClick={() => navigate('/profile')} className="hidden lg:block">
+              <Avatar src={user?.avatar || ''} size="md" ring />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        {children}
+      </main>
+
+      {/* Bottom nav — mobile */}
+      <nav className="fixed bottom-0 inset-x-0 z-30 bg-white/90 backdrop-blur-md border-t border-ink-200 lg:hidden">
+        <div className="flex items-center justify-around h-16 px-2">
+          {bottomNavItems.map((item) => {
+            const isActive = location.pathname === item.to || (item.to === '/home' && location.pathname === '/');
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors ${
+                  isActive ? 'text-brand-600' : 'text-ink-400'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-[10px] font-semibold">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
