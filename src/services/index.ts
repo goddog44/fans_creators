@@ -44,6 +44,7 @@ const mapProfile = (row: any): User => ({
 
 // Helper to map database rows to Post type
 const postMediaUrl = (path: string) => supabase.storage.from('post-media').getPublicUrl(path).data.publicUrl;
+const isAbsoluteUrl = (value: unknown): value is string => typeof value === 'string' && /^https?:\/\//i.test(value);
 
 const mapPost = (row: any): Post => ({
   id: row.id,
@@ -58,9 +59,9 @@ const mapPost = (row: any): Post => ({
   }))).sort((a: any, b: any) => a.position - b.position).map((media: any): PostMedia => ({
     id: media.id,
     type: media.media_type,
-    url: media.legacy_url || postMediaUrl(media.storage_path),
-    thumbnail: media.legacy_thumbnail || (media.thumbnail_path ? postMediaUrl(media.thumbnail_path) : undefined),
-    storagePath: media.storage_path,
+    url: media.legacy_url || (isAbsoluteUrl(media.storage_path) ? media.storage_path : postMediaUrl(media.storage_path)),
+    thumbnail: media.legacy_thumbnail || (media.thumbnail_path ? (isAbsoluteUrl(media.thumbnail_path) ? media.thumbnail_path : postMediaUrl(media.thumbnail_path)) : undefined),
+    storagePath: isAbsoluteUrl(media.storage_path) ? undefined : media.storage_path,
     thumbnailPath: media.thumbnail_path || undefined,
     position: media.position,
     duration: media.duration || undefined,
