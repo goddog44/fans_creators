@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Sparkles, Shield, DollarSign, Users, Heart, MessageCircle, TrendingUp, ArrowRight, Star, Lock } from 'lucide-react';
+import { Sparkles, Shield, DollarSign, Users, Heart, MessageCircle, TrendingUp, ArrowRight, Star, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { modelService } from '@/services';
 import { ModelCard } from '@/components/shared/ModelCard';
@@ -8,10 +8,21 @@ import type { User } from '@/types';
 
 export function LandingPage() {
   const [trending, setTrending] = useState<User[]>([]);
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
+  const heroImages = ['/hero/hero-1.jpg', '/hero/hero-2.jpg', '/hero/hero-3.jpg', '/hero/hero-4.jpg'];
 
   useEffect(() => {
     modelService.getTrending().then(setTrending);
   }, []);
+
+  useEffect(() => {
+    if (heroPaused) return;
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % heroImages.length);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [heroPaused, heroImages.length]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -31,16 +42,26 @@ export function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-white to-accent-50" />
-        <div className="absolute top-20 right-10 w-72 h-72 bg-brand-200/30 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 left-10 w-96 h-96 bg-accent-200/20 rounded-full blur-3xl" />
-        <div className="relative max-w-6xl mx-auto px-4 py-20 lg:py-28">
+      <section
+        className="relative min-h-[620px] overflow-hidden bg-ink-900"
+        onMouseEnter={() => setHeroPaused(true)}
+        onMouseLeave={() => setHeroPaused(false)}
+      >
+        {heroImages.map((image, index) => (
+          <div
+            key={image}
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${index === heroSlide ? 'opacity-100' : 'opacity-0'}`}
+            style={{ backgroundImage: `url(${image})` }}
+            aria-hidden={index !== heroSlide}
+          />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+        <div className="relative z-10 max-w-6xl mx-auto px-4 py-20 lg:py-28 min-h-[620px] flex items-center">
           <div className="max-w-2xl">
-            <h1 className="font-display font-bold text-4xl lg:text-6xl text-ink-900 leading-[1.1] tracking-tight">
+            <h1 className="font-display font-bold text-4xl lg:text-6xl text-white leading-[1.1] tracking-tight">
               Connect with your favorite creators like never before
             </h1>
-            <p className="text-lg text-ink-600 mt-6 leading-relaxed max-w-xl">
+            <p className="text-lg text-white/85 mt-6 leading-relaxed max-w-xl">
               Subscribe to exclusive content, message directly, unlock premium posts, and support the creators you love — all in one elegant platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
@@ -51,23 +72,36 @@ export function LandingPage() {
                 <Button variant="outline" size="lg" className="w-full sm:w-auto">Browse creators</Button>
               </Link>
             </div>
-            <div className="flex items-center gap-6 mt-10">
+            <div className="flex items-center gap-6 mt-10 text-white">
               <div>
                 <p className="text-2xl font-display font-bold text-ink-900">12K+</p>
-                <p className="text-sm text-ink-500">Creators</p>
+                <p className="text-sm text-white/65">Creators</p>
               </div>
-              <div className="w-px h-10 bg-ink-200" />
+              <div className="w-px h-10 bg-white/30" />
               <div>
                 <p className="text-2xl font-display font-bold text-ink-900">500K+</p>
-                <p className="text-sm text-ink-500">Members</p>
+                <p className="text-sm text-white/65">Members</p>
               </div>
-              <div className="w-px h-10 bg-ink-200" />
+              <div className="w-px h-10 bg-white/30" />
               <div>
                 <p className="text-2xl font-display font-bold text-ink-900">$2M+</p>
-                <p className="text-sm text-ink-500">Paid out</p>
+                <p className="text-sm text-white/65">Paid out</p>
               </div>
             </div>
           </div>
+        </div>
+        <div className="absolute bottom-7 left-1/2 z-20 -translate-x-1/2 flex items-center gap-3">
+          <button type="button" onClick={() => setHeroSlide((heroSlide - 1 + heroImages.length) % heroImages.length)} className="p-2 rounded-full bg-black/35 text-white hover:bg-black/60" title="Previous slide" aria-label="Previous slide">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            {heroImages.map((image, index) => (
+              <button key={image} type="button" onClick={() => setHeroSlide(index)} className={`h-2 rounded-full transition-all ${index === heroSlide ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`} title={`Slide ${index + 1}`} aria-label={`Go to slide ${index + 1}`} />
+            ))}
+          </div>
+          <button type="button" onClick={() => setHeroSlide((heroSlide + 1) % heroImages.length)} className="p-2 rounded-full bg-black/35 text-white hover:bg-black/60" title="Next slide" aria-label="Next slide">
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       </section>
 
