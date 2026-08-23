@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { UserShell } from '@/components/layout/UserShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
@@ -15,6 +16,7 @@ import { Send, ImageIcon, DollarSign, Lock, ArrowLeft, Search, Paperclip } from 
 export function UserMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [participants, setParticipants] = useState<Record<string, UserType>>({});
   const [activeConv, setActiveConv] = useState<string | null>(null);
@@ -36,18 +38,36 @@ export function UserMessages() {
       users.forEach((u) => { if (u) map[u.id] = u; });
       setParticipants(map);
       setLoading(false);
+
+      // Arrived here from "Message" on a creator's profile with a specific
+      // conversation to open.
+      const targetId = (location.state as { conversationId?: string } | null)?.conversationId;
+      if (targetId) {
+        setActiveConv(targetId);
+        setShowMobileChat(true);
+      }
     });
-  }, [user]);
+  }, [user, location.state]);
 
   useEffect(() => {
-    if (activeConv) {
-      messageService.getMessages(activeConv).then((msgs) => {
-        setMessages(msgs);
-        messageService.markRead(activeConv, user?.id || '');
+    if (!activeConv || !user) return;
+    messageService.getMessages(activeConv).then((msgs) => {
+      setMessages(msgs);
+      messageService.markRead(activeConv, user.id).then(() => {
         setConversations((prev) => prev.map((c) => (c.id === activeConv ? { ...c, unreadCount: 0 } : c)));
-      });
-    }
-  }, [activeConv, user]);
+      }).catch((err) => toast(err instanceof Error ? err.message : 'Failed to mark read', 'error'));
+    });
+
+    // Live updates for this conversation while it's open.
+    const unsubscribe = messageService.subscribeToMessages(activeConv, (msg) => {
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+      if (msg.senderId !== user.id) {
+        messageService.markRead(activeConv, user.id).catch(() => {});
+      }
+    });
+
+    return () => unsubscribe();
+  }, [activeConv, user, toast]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

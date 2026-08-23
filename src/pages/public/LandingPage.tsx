@@ -19,7 +19,7 @@ export function LandingPage() {
       <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white font-bold">C</div>
+            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
             <span className="font-display font-bold text-xl text-ink-900">CreatorHub</span>
           </div>
           <div className="flex items-center gap-2">
@@ -137,7 +137,7 @@ export function LandingPage() {
       <footer className="border-t border-ink-100">
         <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-xs">C</div>
+            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-7 h-7 rounded-lg" />
             <span className="font-display font-bold text-ink-900">CreatorHub</span>
           </div>
           <p className="text-sm text-ink-500">© 2026 CreatorHub. All rights reserved.</p>

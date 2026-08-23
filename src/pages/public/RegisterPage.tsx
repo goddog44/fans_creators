@@ -5,7 +5,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
-import type { Role } from '@/types';
 import { roleHomeRoute } from '@/lib/rbac';
 
 export function RegisterPage() {
@@ -16,7 +15,6 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<Role>('USER');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,7 +27,15 @@ export function RegisterPage() {
     }
     setLoading(true);
     try {
-      const user = await register({ name, email, password, role });
+      // Public sign-up always creates a fan (USER) account. Creator
+      // accounts are provisioned by the CreatorHub team after a review, via
+      // an authenticated admin action — never by client-side self-selection.
+      const user = await register({ name, email, password });
+      if (!user) {
+        toast('Account created. Check your email to confirm your account.', 'info');
+        navigate('/login');
+        return;
+      }
       toast(`Welcome to CreatorHub, ${user.name}!`);
       navigate(roleHomeRoute[user.role]);
     } catch (err: any) {
@@ -44,7 +50,7 @@ export function RegisterPage() {
       <div className="hidden lg:flex flex-1 bg-brand-600 relative overflow-hidden flex-col justify-between p-12">
         <div className="absolute top-20 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <Link to="/" className="relative flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-brand-600 font-bold">C</div>
+          <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
           <span className="font-display font-bold text-xl text-white">CreatorHub</span>
         </Link>
         <div className="relative">
@@ -57,7 +63,7 @@ export function RegisterPage() {
       <div className="flex-1 flex items-center justify-center p-6 bg-ink-50">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white font-bold">C</div>
+            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
             <span className="font-display font-bold text-xl text-ink-900">CreatorHub</span>
           </div>
           <h1 className="font-display font-bold text-2xl text-ink-900 mb-1">Create your account</h1>
@@ -87,31 +93,14 @@ export function RegisterPage() {
                 </button>
               </div>
             </Field>
-            <Field label="I want to">
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { val: 'USER' as Role, label: 'Be a fan', desc: 'Subscribe & support' },
-                  { val: 'MODEL' as Role, label: 'Be a creator', desc: 'Create & earn' },
-                ].map((opt) => (
-                  <button
-                    key={opt.val}
-                    type="button"
-                    onClick={() => setRole(opt.val)}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      role === opt.val ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-ink-200 hover:border-ink-300'
-                    }`}
-                  >
-                    <p className="font-semibold text-sm text-ink-900">{opt.label}</p>
-                    <p className="text-xs text-ink-500">{opt.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </Field>
             <Button type="submit" className="w-full" size="lg" loading={loading}>Create account <ArrowRight className="w-4 h-4" /></Button>
           </form>
 
           <p className="text-center text-sm text-ink-500 mt-6">
             Already have an account? <Link to="/login" className="font-semibold text-brand-600 hover:text-brand-700">Sign in</Link>
+          </p>
+          <p className="text-center text-xs text-ink-400 mt-3">
+            Want to sell content as a creator? Sign up as a fan first, then apply from your account settings — our team reviews and approves every creator account.
           </p>
         </div>
       </div>

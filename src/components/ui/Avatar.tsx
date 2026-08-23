@@ -1,6 +1,7 @@
 interface AvatarProps {
   src: string;
   alt?: string;
+  emoji?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   ring?: boolean;
   online?: boolean;
@@ -25,17 +26,20 @@ const dotSize = {
   '2xl': 'w-5 h-5',
 };
 
-export function Avatar({ src, alt = '', size = 'md', ring, online, className = '' }: AvatarProps) {
+export function Avatar({ src, emoji, alt = '', size = 'md', ring, online, className = '' }: AvatarProps) {
+  const classes = `${sizeMap[size]} rounded-full ${ring ? 'ring-2 ring-brand-500 ring-offset-2' : ''}`;
+  const selectedEmoji = emoji || (src.startsWith('emoji:') ? src.slice(6) : undefined);
+  const imageSrc = src.startsWith('emoji:') ? '' : src;
   return (
     <div className={`relative inline-block ${className}`}>
-      <img
-        src={src}
-        alt={alt}
-        className={`${sizeMap[size]} rounded-full object-cover bg-ink-100 ${ring ? 'ring-2 ring-brand-500 ring-offset-2' : ''}`}
-      />
-      {online && (
-        <span className={`absolute bottom-0 right-0 ${dotSize[size]} bg-success-500 rounded-full ring-2 ring-white`} />
+      {imageSrc ? (
+        <img src={imageSrc} alt={alt} className={`${classes} object-cover bg-ink-100`} />
+      ) : (
+        <span className={`${classes} flex items-center justify-center bg-ink-900 text-white text-2xl`} aria-label={alt || 'Profile avatar'}>
+          {selectedEmoji || <img src="/creatorhub-mark.svg" alt="" className="w-2/3 h-2/3" />}
+        </span>
       )}
+      {online && <span className={`absolute bottom-0 right-0 ${dotSize[size]} bg-success-500 rounded-full ring-2 ring-white`} />}
     </div>
   );
 }

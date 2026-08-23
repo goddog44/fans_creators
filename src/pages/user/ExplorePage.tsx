@@ -38,7 +38,7 @@ export function ExplorePage() {
       <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-200">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-sm">C</div>
+            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-8 h-8 rounded-lg" />
             <span className="font-display font-bold text-lg text-ink-900">CreatorHub</span>
           </a>
           <a href="/login" className="text-sm font-semibold text-brand-600 hover:text-brand-700">Sign in</a>

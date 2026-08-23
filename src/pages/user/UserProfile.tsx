@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { UserShell } from '@/components/layout/UserShell';
 import { Card, CardBody } from '@/components/ui/Card';
-import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ProfileMediaEditor } from '@/components/shared/ProfileMediaEditor';
 import { Input, Field, Textarea } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { userService } from '@/services';
-import { BadgeCheck, Camera, Mail, Calendar } from 'lucide-react';
+import { BadgeCheck, Mail, Calendar } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 
 export function UserProfile() {
@@ -34,15 +34,8 @@ export function UserProfile() {
       <div className="max-w-2xl space-y-6">
         {/* Profile card */}
         <Card className="overflow-hidden">
-          <div className="h-32 bg-gradient-to-r from-brand-400 to-brand-600 relative">
-            <div className="absolute -bottom-12 left-6">
-              <Avatar src={user.avatar} size="2xl" className="border-4 border-white rounded-full" />
-            </div>
-            <button className="absolute top-3 right-3 p-2 rounded-xl bg-white/20 backdrop-blur text-white hover:bg-white/30 transition-colors">
-              <Camera className="w-4 h-4" />
-            </button>
-          </div>
-          <CardBody className="pt-14">
+          <CardBody>
+            <ProfileMediaEditor user={user} onUpdated={updateUser} />
             <div className="flex items-center gap-2">
               <h2 className="font-display font-bold text-xl text-ink-900">{user.name}</h2>
               {user.verified && <BadgeCheck className="w-5 h-5 text-brand-500" />}

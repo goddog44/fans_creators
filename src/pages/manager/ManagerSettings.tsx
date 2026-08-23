@@ -4,6 +4,7 @@ import { DashboardShell } from '@/components/layout/DashboardShell';
 import { PageHeader } from '@/components/shared/StatCard';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ProfileMediaEditor } from '@/components/shared/ProfileMediaEditor';
 import { Input, Field } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -30,6 +31,7 @@ export function ManagerSettings() {
       <PageHeader title="Settings" subtitle="Manage your account" />
 
       <div className="max-w-2xl space-y-6">
+        {user && <Card className="p-6"><h3 className="font-display font-bold text-lg text-ink-900 mb-4">Profile media</h3><ProfileMediaEditor user={user} onUpdated={updateUser} /></Card>}
         <Card className="p-6">
           <h3 className="font-display font-bold text-lg text-ink-900 mb-4">Profile</h3>
           <div className="space-y-4">

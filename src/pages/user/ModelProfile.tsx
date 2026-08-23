@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BadgeCheck, Users, Star, Calendar, Link2, Heart, Share2, MoreHorizontal, Lock, DollarSign } from 'lucide-react';
+import { BadgeCheck, Users, Star, Calendar, Link2, Heart, Share2, MoreHorizontal, Lock, DollarSign, MessageCircle } from 'lucide-react';
 import { UserShell } from '@/components/layout/UserShell';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { Avatar } from '@/components/ui/Avatar';
@@ -13,7 +13,7 @@ import { LoadingState, EmptyState } from '@/components/ui/States';
 import { PostCard } from '@/components/shared/PostCard';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { modelService, contentService, subscriptionService, userService } from '@/services';
+import { modelService, contentService, subscriptionService, userService, messageService } from '@/services';
 import type { User, Post } from '@/types';
 import { formatTimeAgo, formatDate } from '@/lib/format';
 
@@ -56,6 +56,16 @@ export function ModelProfile() {
     toast(`Subscribed to ${model.name}!`, 'success');
   };
 
+  const handleMessage = async () => {
+    if (!user || !model) return;
+    try {
+      const conv = await messageService.getOrCreateConversation(user.id, model.id);
+      navigate('/messages', { state: { conversationId: conv.id } });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to start conversation', 'error');
+    }
+  };
+
   const Shell = hasRole('USER') ? UserShell : ({ children }: any) => <DashboardShell navItems={[]} brandColor="ink">{children}</DashboardShell>;
 
   if (loading) return <Shell><LoadingState /></Shell>;
@@ -87,6 +97,9 @@ export function ModelProfile() {
         </div>
         <div className="flex items-center gap-2 sm:pb-2">
           <Button variant="outline" size="md"><Share2 className="w-4 h-4" /></Button>
+          {user && user.id !== model.id && (
+            <Button variant="outline" size="md" onClick={handleMessage}><MessageCircle className="w-4 h-4" /></Button>
+          )}
           {isSubscribed ? (
             <Button variant="outline" size="md">Subscribed</Button>
           ) : (

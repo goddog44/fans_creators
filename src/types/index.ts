@@ -45,6 +45,7 @@ export interface User {
   name: string;
   username: string;
   avatar: string;
+  avatarEmoji?: string;
   cover?: string;
   bio?: string;
   status: AccountStatus;
@@ -75,6 +76,8 @@ export interface Post {
   tips: number;
   createdAt: string;
   scheduledAt?: string;
+  likedByUser?: boolean;
+  bookmarkedByUser?: boolean;
 }
 
 export interface Comment {
@@ -82,6 +85,8 @@ export interface Comment {
   userId: string;
   text: string;
   createdAt: string;
+  userName?: string;
+  userAvatar?: string;
 }
 
 export interface Subscription {

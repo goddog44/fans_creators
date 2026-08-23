@@ -82,7 +82,7 @@ export function DashboardShell({ navItems, children, brandColor = 'brand' }: Das
             </button>
             <div className="relative">
               <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 p-1 pr-2 rounded-xl hover:bg-ink-100 transition-colors">
-                <Avatar src={user?.avatar || ''} size="sm" />
+                <Avatar src={user?.avatar || ''} emoji={user?.avatarEmoji} size="sm" />
                 <div className="hidden sm:block text-left">
                   <p className="text-xs font-semibold text-ink-900 leading-tight">{user?.name}</p>
                   <p className="text-xs text-ink-500">{user ? roleLabel[user.role] : ''}</p>
@@ -149,7 +149,7 @@ function SidebarContent({ navItems, user, c, onLogout }: { navItems: NavItem[]; 
       </nav>
       <div className="p-3 border-t border-ink-100">
         <div className="flex items-center gap-3 p-2">
-          <Avatar src={user?.avatar || ''} size="sm" />
+          <Avatar src={user?.avatar || ''} emoji={user?.avatarEmoji} size="sm" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-ink-900 truncate">{user?.name}</p>
             <p className="text-xs text-ink-500 truncate">{user?.email}</p>

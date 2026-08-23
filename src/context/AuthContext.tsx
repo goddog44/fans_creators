@@ -1,81 +1,90 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { User, Role } from '@/types';
 import { authService } from '@/services';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: { name: string; email: string; password: string; role: Role }) => Promise<User>;
+  register: (data: { name: string; email: string; password: string }) => Promise<User | null>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (token: string, password: string) => Promise<void>;
+  resetPassword: (password: string) => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   hasRole: (...roles: Role[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = 'creatorhub-auth';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Initialize auth state from Supabase session
   useEffect(() => {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    const initializeAuth = async () => {
       try {
-        const parsed = JSON.parse(stored) as User;
-        authService.setCurrentUser(parsed);
-        setUser(parsed);
-      } catch {
-        // ignore
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
-  }, []);
+    };
 
-  const persist = (u: User | null) => {
-    if (u) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(u));
-    else sessionStorage.removeItem(STORAGE_KEY);
-  };
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const u = await authService.login(email, password);
     setUser(u);
-    persist(u);
     return u;
   }, []);
 
-  const register = useCallback(async (data: { name: string; email: string; password: string; role: Role }) => {
+  const register = useCallback(async (data: { name: string; email: string; password: string }) => {
     const u = await authService.register(data);
     setUser(u);
-    persist(u);
     return u;
   }, []);
 
   const logout = useCallback(async () => {
     await authService.logout();
     setUser(null);
-    persist(null);
   }, []);
 
   const forgotPassword = useCallback(async (email: string) => {
     await authService.forgotPassword(email);
   }, []);
 
-  const resetPassword = useCallback(async (token: string, password: string) => {
-    await authService.resetPassword(token, password);
+  const resetPassword = useCallback(async (password: string) => {
+    await authService.resetPassword(password);
   }, []);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const next = { ...prev, ...updates };
-      persist(next);
-      authService.setCurrentUser(next);
-      return next;
+      return { ...prev, ...updates };
     });
   }, []);
 

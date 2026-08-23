@@ -31,7 +31,7 @@ export function UserShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <NavLink to="/home" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-sm">C</div>
+            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-8 h-8 rounded-lg" />
             <span className="font-display font-bold text-lg text-ink-900 hidden sm:block">CreatorHub</span>
           </NavLink>
 
@@ -70,10 +70,10 @@ export function UserShell({ children }: { children: ReactNode }) {
               <span className="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full" />
             </button>
             <button onClick={() => navigate('/profile')} className="lg:hidden">
-              <Avatar src={user?.avatar || ''} size="sm" />
+              <Avatar src={user?.avatar || ''} emoji={user?.avatarEmoji} size="sm" />
             </button>
             <button onClick={() => navigate('/profile')} className="hidden lg:block">
-              <Avatar src={user?.avatar || ''} size="md" ring />
+              <Avatar src={user?.avatar || ''} emoji={user?.avatarEmoji} size="md" ring />
             </button>
           </div>
         </div>
