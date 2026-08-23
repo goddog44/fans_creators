@@ -49,11 +49,17 @@ const mapPost = (row: any): Post => ({
   id: row.id,
   modelId: row.model_id,
   text: row.text || '',
-  media: (row.post_media || []).sort((a: any, b: any) => a.position - b.position).map((media: any): PostMedia => ({
+  media: (row.post_media?.length ? row.post_media : (row.media || []).map((media: any, position: number) => ({
+    id: `${row.id}-legacy-${position}`,
+    media_type: media.type,
+    legacy_url: media.url,
+    legacy_thumbnail: media.thumbnail,
+    position,
+  }))).sort((a: any, b: any) => a.position - b.position).map((media: any): PostMedia => ({
     id: media.id,
     type: media.media_type,
-    url: postMediaUrl(media.storage_path),
-    thumbnail: media.thumbnail_path ? postMediaUrl(media.thumbnail_path) : undefined,
+    url: media.legacy_url || postMediaUrl(media.storage_path),
+    thumbnail: media.legacy_thumbnail || (media.thumbnail_path ? postMediaUrl(media.thumbnail_path) : undefined),
     storagePath: media.storage_path,
     thumbnailPath: media.thumbnail_path || undefined,
     position: media.position,
