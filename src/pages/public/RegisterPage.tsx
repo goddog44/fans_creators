@@ -47,8 +47,11 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex flex-1 bg-brand-600 relative overflow-hidden flex-col justify-between p-12">
-        <div className="absolute top-20 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+      <div
+        className="hidden lg:flex flex-1 relative overflow-hidden flex-col justify-between p-12 bg-cover bg-center"
+        style={{ backgroundImage: "url('/hero/hero-4.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-950/85 via-brand-800/60 to-ink-950/45" />
         <Link to="/" className="relative flex items-center gap-2">
           <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
           <span className="font-display font-bold text-xl text-white">CreatorHub</span>
@@ -60,8 +63,9 @@ export function RegisterPage() {
         <div className="relative" />
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 bg-ink-50">
-        <div className="w-full max-w-sm">
+      <div className="relative flex-1 flex items-center justify-center p-6 bg-ink-50 bg-cover bg-center" style={{ backgroundImage: "url('/hero/hero-3.jpg')" }}>
+        <div className="absolute inset-0 bg-white/80" />
+        <div className="relative z-10 w-full max-w-sm bg-white/95 p-6 sm:p-8 rounded-2xl shadow-card">
           <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
             <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
             <span className="font-display font-bold text-xl text-ink-900">CreatorHub</span>

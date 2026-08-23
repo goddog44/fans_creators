@@ -188,8 +188,8 @@ export const userService = {
     return kind === 'avatar' ? profile.avatar : profile.cover || data.publicUrl;
   },
 
-  async setAvatarEmoji(userId: string, emoji: string): Promise<User> {
-    return this.updateProfile(userId, { avatar: '', avatarEmoji: emoji });
+  async setAvatarUrl(userId: string, avatar: string): Promise<User> {
+    return this.updateProfile(userId, { avatar, avatarEmoji: undefined });
   },
 
   async getById(id: string): Promise<User | undefined> {

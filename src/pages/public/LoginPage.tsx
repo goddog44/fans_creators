@@ -5,7 +5,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
-import { Card } from '@/components/ui/Card';
 import { roleHomeRoute } from '@/lib/rbac';
 
 export function LoginPage() {
@@ -36,9 +35,11 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left side — branding */}
-      <div className="hidden lg:flex flex-1 bg-ink-900 relative overflow-hidden flex-col justify-between p-12">
-        <div className="absolute top-20 right-10 w-72 h-72 bg-brand-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
+      <div
+        className="hidden lg:flex flex-1 relative overflow-hidden flex-col justify-between p-12 bg-cover bg-center"
+        style={{ backgroundImage: "url('/hero/hero-2.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-ink-950/90 via-ink-950/65 to-brand-900/45" />
         <Link to="/" className="relative flex items-center gap-2">
           <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
           <span className="font-display font-bold text-xl text-white">CreatorHub</span>
@@ -48,14 +49,14 @@ export function LoginPage() {
           <p className="text-ink-300 mt-4 text-lg">Subscribe, message, and unlock exclusive content from your favorite creators.</p>
         </div>
         <div className="relative flex items-center gap-2 text-ink-400 text-sm">
-          <Sparkles className="w-4 h-4" />
           Trusted by 12,000+ creators worldwide
         </div>
       </div>
 
       {/* Right side — form */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-ink-50">
-        <div className="w-full max-w-sm">
+      <div className="relative flex-1 flex items-center justify-center p-6 bg-ink-50 bg-cover bg-center" style={{ backgroundImage: "url('/hero/hero-1.jpg')" }}>
+        <div className="absolute inset-0 bg-white/80" />
+        <div className="relative z-10 w-full max-w-sm bg-white/95 p-6 sm:p-8 rounded-2xl shadow-card">
           <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
             <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
             <span className="font-display font-bold text-xl text-ink-900">CreatorHub</span>
