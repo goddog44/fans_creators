@@ -40,7 +40,7 @@ export function LoginPage() {
         <div className="absolute top-20 right-10 w-72 h-72 bg-brand-500/20 rounded-full blur-3xl" />
         <div className="absolute bottom-20 left-10 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
         <Link to="/" className="relative flex items-center gap-2">
-          <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
+          <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
           <span className="font-display font-bold text-xl text-white">CreatorHub</span>
         </Link>
         <div className="relative">
@@ -57,7 +57,7 @@ export function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 bg-ink-50">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
+            <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
             <span className="font-display font-bold text-xl text-ink-900">CreatorHub</span>
           </div>
           <h1 className="font-display font-bold text-2xl text-ink-900 mb-1">Welcome back</h1>

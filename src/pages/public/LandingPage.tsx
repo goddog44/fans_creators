@@ -19,7 +19,7 @@ export function LandingPage() {
       <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
+            <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
             <span className="font-display font-bold text-xl text-ink-900">CreatorHub</span>
           </div>
           <div className="flex items-center gap-2">
@@ -37,10 +37,6 @@ export function LandingPage() {
         <div className="absolute bottom-10 left-10 w-96 h-96 bg-accent-200/20 rounded-full blur-3xl" />
         <div className="relative max-w-6xl mx-auto px-4 py-20 lg:py-28">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-sm font-semibold mb-6">
-              <Sparkles className="w-4 h-4" />
-              The premium creator platform
-            </div>
             <h1 className="font-display font-bold text-4xl lg:text-6xl text-ink-900 leading-[1.1] tracking-tight">
               Connect with your favorite creators like never before
             </h1>
@@ -137,7 +133,7 @@ export function LandingPage() {
       <footer className="border-t border-ink-100">
         <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-7 h-7 rounded-lg" />
+            <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-7 h-7 rounded-lg" />
             <span className="font-display font-bold text-ink-900">CreatorHub</span>
           </div>
           <p className="text-sm text-ink-500">© 2026 CreatorHub. All rights reserved.</p>

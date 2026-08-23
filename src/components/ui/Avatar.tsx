@@ -36,7 +36,7 @@ export function Avatar({ src, emoji, alt = '', size = 'md', ring, online, classN
         <img src={imageSrc} alt={alt} className={`${classes} object-cover bg-ink-100`} />
       ) : (
         <span className={`${classes} flex items-center justify-center bg-ink-900 text-white text-2xl`} aria-label={alt || 'Profile avatar'}>
-          {selectedEmoji || <img src="/creatorhub-mark.svg" alt="" className="w-2/3 h-2/3" />}
+          {selectedEmoji || <img src="/image-removebg-preview.png" alt="" className="w-2/3 h-2/3" />}
         </span>
       )}
       {online && <span className={`absolute bottom-0 right-0 ${dotSize[size]} bg-success-500 rounded-full ring-2 ring-white`} />}

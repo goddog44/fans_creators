@@ -50,7 +50,7 @@ export function RegisterPage() {
       <div className="hidden lg:flex flex-1 bg-brand-600 relative overflow-hidden flex-col justify-between p-12">
         <div className="absolute top-20 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <Link to="/" className="relative flex items-center gap-2">
-          <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
+          <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
           <span className="font-display font-bold text-xl text-white">CreatorHub</span>
         </Link>
         <div className="relative">
@@ -63,7 +63,7 @@ export function RegisterPage() {
       <div className="flex-1 flex items-center justify-center p-6 bg-ink-50">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
+            <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-9 h-9 rounded-xl" />
             <span className="font-display font-bold text-xl text-ink-900">CreatorHub</span>
           </div>
           <h1 className="font-display font-bold text-2xl text-ink-900 mb-1">Create your account</h1>

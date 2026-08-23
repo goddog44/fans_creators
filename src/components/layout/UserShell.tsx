@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Compass, CreditCard, MessageSquare, Bell, Bookmark, User, Search } from 'lucide-react';
+import { Home, Compass, CreditCard, MessageSquare, Bell, Bookmark, User, Search, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
+import { useToast } from '@/context/ToastContext';
 
 const navItems = [
   { to: '/home', label: 'Home', icon: Home },
@@ -21,9 +22,20 @@ const bottomNavItems = [
 ];
 
 export function UserShell({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast('Signed out successfully', 'info');
+      navigate('/login');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Could not sign out', 'error');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-ink-50 pb-20 lg:pb-0">
@@ -31,7 +43,7 @@ export function UserShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <NavLink to="/home" className="flex items-center gap-2">
-            <img src="/creatorhub-mark.svg" alt="CreatorHub" className="w-8 h-8 rounded-lg" />
+            <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-8 h-8 rounded-lg" />
             <span className="font-display font-bold text-lg text-ink-900 hidden sm:block">CreatorHub</span>
           </NavLink>
 
@@ -74,6 +86,15 @@ export function UserShell({ children }: { children: ReactNode }) {
             </button>
             <button onClick={() => navigate('/profile')} className="hidden lg:block">
               <Avatar src={user?.avatar || ''} emoji={user?.avatarEmoji} size="md" ring />
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-2 rounded-lg text-ink-500 hover:text-danger-600 hover:bg-danger-50 transition-colors"
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
