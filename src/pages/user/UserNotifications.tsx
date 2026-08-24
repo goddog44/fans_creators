@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserShell } from '@/components/layout/UserShell';
+import { RoleShell } from '@/components/layout/RoleShell';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
@@ -45,7 +45,7 @@ export function UserNotifications() {
   };
 
   return (
-    <UserShell>
+    <RoleShell>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="font-display font-bold text-2xl text-ink-900">Notifications</h1>
@@ -90,6 +90,6 @@ export function UserNotifications() {
           })}
         </div>
       )}
-    </UserShell>
+    </RoleShell>
   );
 }

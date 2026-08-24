@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, TrendingUp, Clock, Star } from 'lucide-react';
-import { UserShell } from '@/components/layout/UserShell';
+import { RoleShell } from '@/components/layout/RoleShell';
 import { ModelCard } from '@/components/shared/ModelCard';
 import { Input } from '@/components/ui/Input';
 import { Tabs, useTabs } from '@/components/ui/Tabs';
@@ -35,7 +35,7 @@ export function UserExplore() {
   const display = query.trim() ? results : active === 'trending' ? trending : newest;
 
   return (
-    <UserShell>
+    <RoleShell>
       <h1 className="font-display font-bold text-2xl text-ink-900 mb-2">Explore Creators</h1>
       <p className="text-ink-500 mb-6">Discover and subscribe to amazing creators</p>
 
@@ -69,6 +69,6 @@ export function UserExplore() {
           ))}
         </div>
       )}
-    </UserShell>
+    </RoleShell>
   );
 }

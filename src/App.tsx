@@ -2,8 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { roleHomeRoute } from '@/lib/rbac';
-import type { Role } from '@/types';
+import { allRoles, roleHomeRoute } from '@/lib/rbac';
 
 // Public
 import { LandingPage } from '@/pages/public/LandingPage';
@@ -26,6 +25,7 @@ import { UserProfile } from '@/pages/user/UserProfile';
 // Model
 import { ModelDashboard } from '@/pages/model/ModelDashboard';
 import { ModelContent } from '@/pages/model/ModelContent';
+import { ModelStories } from '@/pages/model/ModelStories';
 import { ModelSubscribers } from '@/pages/model/ModelSubscribers';
 import { ModelMessages } from '@/pages/model/ModelMessages';
 import { ModelEarnings } from '@/pages/model/ModelEarnings';
@@ -71,26 +71,27 @@ function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
-      <Route path="/explore" element={<ProtectedRoute roles={['USER']}><UserExplore /></ProtectedRoute>} />
+      <Route path="/explore" element={<ProtectedRoute roles={allRoles}><UserExplore /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* User */}
-      <Route path="/home" element={<ProtectedRoute roles={['USER']}><UserHome /></ProtectedRoute>} />
-      <Route path="/user/explore" element={<ProtectedRoute roles={['USER']}><UserExplore /></ProtectedRoute>} />
-      <Route path="/model/:id" element={<ProtectedRoute roles={['USER', 'MODEL', 'MANAGER', 'ADMIN']}><ModelProfile /></ProtectedRoute>} />
-      <Route path="/subscriptions" element={<ProtectedRoute roles={['USER']}><UserSubscriptions /></ProtectedRoute>} />
-      <Route path="/messages" element={<ProtectedRoute roles={['USER']}><UserMessages /></ProtectedRoute>} />
-      <Route path="/notifications" element={<ProtectedRoute roles={['USER']}><UserNotifications /></ProtectedRoute>} />
-      <Route path="/bookmarks" element={<ProtectedRoute roles={['USER']}><UserBookmarks /></ProtectedRoute>} />
-      <Route path="/payments" element={<ProtectedRoute roles={['USER']}><UserPayments /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute roles={['USER']}><UserProfile /></ProtectedRoute>} />
+      <Route path="/home" element={<ProtectedRoute roles={allRoles}><UserHome /></ProtectedRoute>} />
+      <Route path="/user/explore" element={<ProtectedRoute roles={allRoles}><UserExplore /></ProtectedRoute>} />
+      <Route path="/model/:id" element={<ProtectedRoute roles={allRoles}><ModelProfile /></ProtectedRoute>} />
+      <Route path="/subscriptions" element={<ProtectedRoute roles={allRoles}><UserSubscriptions /></ProtectedRoute>} />
+      <Route path="/messages" element={<ProtectedRoute roles={allRoles}><UserMessages /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute roles={allRoles}><UserNotifications /></ProtectedRoute>} />
+      <Route path="/bookmarks" element={<ProtectedRoute roles={allRoles}><UserBookmarks /></ProtectedRoute>} />
+      <Route path="/payments" element={<ProtectedRoute roles={allRoles}><UserPayments /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute roles={allRoles}><UserProfile /></ProtectedRoute>} />
 
       {/* Model */}
       <Route path="/model" element={<ProtectedRoute roles={['MODEL']}><ModelDashboard /></ProtectedRoute>} />
       <Route path="/model/content" element={<ProtectedRoute roles={['MODEL']}><ModelContent /></ProtectedRoute>} />
+      <Route path="/model/stories" element={<ProtectedRoute roles={['MODEL']}><ModelStories /></ProtectedRoute>} />
       <Route path="/model/subscribers" element={<ProtectedRoute roles={['MODEL']}><ModelSubscribers /></ProtectedRoute>} />
       <Route path="/model/messages" element={<ProtectedRoute roles={['MODEL']}><ModelMessages /></ProtectedRoute>} />
       <Route path="/model/earnings" element={<ProtectedRoute roles={['MODEL']}><ModelEarnings /></ProtectedRoute>} />

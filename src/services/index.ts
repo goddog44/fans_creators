@@ -14,6 +14,7 @@ import type {
   Role,
   ContentStatus,
   Visibility,
+  Story,
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -124,13 +125,7 @@ export const authService = {
     return mapProfile(profile);
   },
 
-  async register(data: { name: string; email: string; password: string }): Promise<User | null> {
-    // SECURITY: public registration always creates a USER account. There is
-    // intentionally no `role` field sent here — the handle_new_user SQL
-    // trigger also hard-codes 'USER' and ignores any role a client might try
-    // to smuggle into auth metadata. Elevating to ADMIN/MANAGER/MODEL can
-    // only be done afterwards by an authenticated admin via the
-    // admin_set_user_role RPC.
+  async register(data: { name: string; email: string; password: string; role: Role }): Promise<User | null> {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -138,6 +133,7 @@ export const authService = {
         data: {
           name: data.name,
           username: data.email.split('@')[0],
+          role: data.role,
         },
       },
     });
@@ -1544,6 +1540,39 @@ export const auditService = {
       ip: entry.ip,
     });
 
+    if (error) throw new Error(error.message);
+  },
+};
+
+export const storyService = {
+  mapStory(story: any): Story {
+    const createdAt = story.created_at;
+    const expiresAt = story.expires_at;
+    const durationHours = story.duration_hours || Math.max(1, (new Date(expiresAt).getTime() - new Date(createdAt).getTime()) / 3600000);
+    return { id: story.id, modelId: story.model_id, text: story.text, createdAt, expiresAt, durationHours };
+  },
+
+  async getByModel(modelId: string): Promise<Story[]> {
+    const { data, error } = await supabase.from('stories').select('*').eq('model_id', modelId).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapStory);
+  },
+
+  async getActive(): Promise<Story[]> {
+    const { data, error } = await supabase.from('stories').select('*').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapStory);
+  },
+
+  async create(modelId: string, text: string, durationHours = 6): Promise<Story> {
+    const safeDuration = Math.min(24, Math.max(1, durationHours));
+    const { data, error } = await supabase.from('stories').insert({ model_id: modelId, text, duration_hours: safeDuration }).select().single();
+    if (error) throw new Error(error.message);
+    return this.mapStory(data);
+  },
+
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase.from('stories').delete().eq('id', id);
     if (error) throw new Error(error.message);
   },
 };

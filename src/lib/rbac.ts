@@ -1,5 +1,7 @@
 import type { Role } from '@/types';
 
+export const allRoles: Role[] = ['USER', 'MODEL', 'MANAGER', 'ADMIN'];
+
 export const roleHomeRoute: Record<Role, string> = {
   ADMIN: '/admin',
   MANAGER: '/manager',

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserShell } from '@/components/layout/UserShell';
+import { RoleShell } from '@/components/layout/RoleShell';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -39,7 +39,7 @@ export function UserPayments() {
   const total = txns.filter((t) => t.type !== 'PAYOUT' && t.status === 'COMPLETED').reduce((s, t) => s + t.amount, 0);
 
   return (
-    <UserShell>
+    <RoleShell>
       <h1 className="font-display font-bold text-2xl text-ink-900 mb-2">Payments</h1>
       <p className="text-ink-500 mb-6">Your transaction history and payment methods</p>
 
@@ -100,6 +100,6 @@ export function UserPayments() {
           })}
         </div>
       )}
-    </UserShell>
+    </RoleShell>
   );
 }

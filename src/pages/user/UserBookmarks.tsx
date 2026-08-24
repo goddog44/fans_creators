@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserShell } from '@/components/layout/UserShell';
+import { RoleShell } from '@/components/layout/RoleShell';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -30,7 +30,7 @@ export function UserBookmarks() {
   }, [user]);
 
   return (
-    <UserShell>
+    <RoleShell>
       <h1 className="font-display font-bold text-2xl text-ink-900 mb-2">Bookmarks</h1>
       <p className="text-ink-500 mb-6">Posts you've saved for later</p>
 
@@ -45,6 +45,6 @@ export function UserBookmarks() {
           ))}
         </div>
       )}
-    </UserShell>
+    </RoleShell>
   );
 }

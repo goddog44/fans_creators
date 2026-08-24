@@ -80,6 +80,15 @@ export interface Post {
   bookmarkedByUser?: boolean;
 }
 
+export interface Story {
+  id: string;
+  modelId: string;
+  text: string;
+  createdAt: string;
+  expiresAt: string;
+  durationHours: number;
+}
+
 export interface PostMedia {
   id?: string;
   type: 'IMAGE' | 'VIDEO';

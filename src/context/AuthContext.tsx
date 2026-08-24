@@ -7,7 +7,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: { name: string; email: string; password: string }) => Promise<User | null>;
+  register: (data: { name: string; email: string; password: string; role: Role }) => Promise<User | null>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (password: string) => Promise<void>;
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u;
   }, []);
 
-  const register = useCallback(async (data: { name: string; email: string; password: string }) => {
+  const register = useCallback(async (data: { name: string; email: string; password: string; role: Role }) => {
     const u = await authService.register(data);
     setUser(u);
     return u;

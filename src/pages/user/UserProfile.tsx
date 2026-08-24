@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserShell } from '@/components/layout/UserShell';
+import { RoleShell } from '@/components/layout/RoleShell';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ProfileMediaEditor } from '@/components/shared/ProfileMediaEditor';
@@ -28,7 +28,7 @@ export function UserProfile() {
   if (!user) return null;
 
   return (
-    <UserShell>
+    <RoleShell>
       <h1 className="font-display font-bold text-2xl text-ink-900 mb-6">My Profile</h1>
 
       <div className="max-w-2xl space-y-6">
@@ -78,6 +78,6 @@ export function UserProfile() {
           </div>
         </Card>
       </div>
-    </UserShell>
+    </RoleShell>
   );
 }

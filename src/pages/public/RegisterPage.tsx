@@ -4,8 +4,9 @@ import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Button } from '@/components/ui/Button';
-import { Input, Field } from '@/components/ui/Input';
+import { Input, Field, Select } from '@/components/ui/Input';
 import { roleHomeRoute } from '@/lib/rbac';
+import type { Role } from '@/types';
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -14,6 +15,7 @@ export function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<Role>('USER');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,10 +29,7 @@ export function RegisterPage() {
     }
     setLoading(true);
     try {
-      // Public sign-up always creates a fan (USER) account. Creator
-      // accounts are provisioned by the CreatorHub team after a review, via
-      // an authenticated admin action — never by client-side self-selection.
-      const user = await register({ name, email, password });
+      const user = await register({ name, email, password, role });
       if (!user) {
         toast('Account created. Check your email to confirm your account.', 'info');
         navigate('/login');
@@ -97,6 +96,14 @@ export function RegisterPage() {
                 </button>
               </div>
             </Field>
+            <Field label="Account type">
+              <Select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+                <option value="USER">User</option>
+                <option value="MODEL">Model / Creator</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
+              </Select>
+            </Field>
             <Button type="submit" className="w-full" size="lg" loading={loading}>Create account <ArrowRight className="w-4 h-4" /></Button>
           </form>
 
@@ -104,7 +111,7 @@ export function RegisterPage() {
             Already have an account? <Link to="/login" className="font-semibold text-brand-600 hover:text-brand-700">Sign in</Link>
           </p>
           <p className="text-center text-xs text-ink-400 mt-3">
-            Want to sell content as a creator? Sign up as a fan first, then apply from your account settings — our team reviews and approves every creator account.
+            Choose the account type that matches your role on CreatorHub.
           </p>
         </div>
       </div>

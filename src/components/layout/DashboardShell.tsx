@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Bell, Search, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Menu, Bell, Search, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { roleLabel } from '@/lib/rbac';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/context/ToastContext';
+import { commonNavItems } from '@/lib/nav';
 
 export interface NavItem {
   to: string;
@@ -44,6 +45,8 @@ export function DashboardShell({ navItems, children, brandColor = 'brand' }: Das
     ink: { bg: 'bg-ink-900', text: 'text-ink-900', active: 'bg-ink-100 text-ink-900', hover: 'hover:bg-ink-100' },
   };
   const c = colorClasses[brandColor] || colorClasses.brand;
+  const notificationRoute = navItems.find((item) => item.label === 'Notifications')?.to || '/notifications';
+  const settingsRoute = navItems.find((item) => item.label === 'Settings')?.to || '/profile';
 
   return (
     <div className="min-h-screen bg-ink-50 flex">
@@ -76,7 +79,7 @@ export function DashboardShell({ navItems, children, brandColor = 'brand' }: Das
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(`${location.pathname.split('/').slice(0, 2).join('/')}/notifications`)} className="relative p-2 rounded-lg hover:bg-ink-100 transition-colors">
+            <button onClick={() => navigate(notificationRoute)} className="relative p-2 rounded-lg hover:bg-ink-100 transition-colors">
               <Bell className="w-5 h-5 text-ink-600" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full" />
             </button>
@@ -93,7 +96,7 @@ export function DashboardShell({ navItems, children, brandColor = 'brand' }: Das
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
                   <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-card border border-ink-200 py-1 z-20 animate-scale-in">
-                    <button onClick={() => { setProfileOpen(false); navigate(`${location.pathname.split('/').slice(0, 2).join('/')}/settings`); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
+                    <button onClick={() => { setProfileOpen(false); navigate(settingsRoute); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink-700 hover:bg-ink-50 transition-colors">
                       <Settings className="w-4 h-4" /> Settings
                     </button>
                     <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors">
@@ -121,11 +124,27 @@ function SidebarContent({ navItems, user, c, onLogout }: { navItems: NavItem[]; 
     <>
       <div className="h-16 flex items-center justify-between px-5 border-b border-ink-100">
         <NavLink to="/" className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center text-white font-bold text-sm`}>C</div>
+          <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-8 h-8 object-contain" />
           <span className="font-display font-bold text-lg text-ink-900">CreatorHub</span>
         </NavLink>
       </div>
-      <nav className="flex-1 py-4 px-3 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 py-4 px-3 overflow-y-auto no-scrollbar">
+        <div className="space-y-0.5 pb-4 mb-4 border-b border-ink-100">
+          {commonNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  isActive ? c.active : `text-ink-600 ${c.hover}`
+                }`
+              }
+            >
+              {item.icon}
+              <span className="flex-1">{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
         <div className="space-y-0.5">
           {navItems.map((item) => (
             <NavLink

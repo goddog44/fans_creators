@@ -1,9 +1,19 @@
-import { LayoutDashboard, FileText, Users, MessageSquare, DollarSign, BarChart3, Bell, User, Settings, UserCircle, FolderOpen, Receipt, ShieldCheck, Wallet } from 'lucide-react';
+import { LayoutDashboard, Compass, CreditCard, FileText, Users, MessageSquare, DollarSign, BarChart3, Bell, Bookmark, User, Settings, UserCircle, FolderOpen, Receipt, ShieldCheck, Wallet, Home, CirclePlay } from 'lucide-react';
 import type { NavItem } from '@/components/layout/DashboardShell';
+
+export const commonNavItems: NavItem[] = [
+  { to: '/home', label: 'Home', icon: <Home className="w-5 h-5" /> },
+  { to: '/explore', label: 'Explore', icon: <Compass className="w-5 h-5" /> },
+  { to: '/subscriptions', label: 'Subscriptions', icon: <CreditCard className="w-5 h-5" /> },
+  { to: '/messages', label: 'Messages', icon: <MessageSquare className="w-5 h-5" /> },
+  { to: '/notifications', label: 'Alerts', icon: <Bell className="w-5 h-5" /> },
+  { to: '/bookmarks', label: 'Bookmarks', icon: <Bookmark className="w-5 h-5" /> },
+];
 
 export const modelNavItems: NavItem[] = [
   { to: '/model', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
   { to: '/model/content', label: 'Content', icon: <FileText className="w-5 h-5" /> },
+  { to: '/model/stories', label: 'Stories', icon: <CirclePlay className="w-5 h-5" /> },
   { to: '/model/subscribers', label: 'Subscribers', icon: <Users className="w-5 h-5" /> },
   { to: '/model/messages', label: 'Messages', icon: <MessageSquare className="w-5 h-5" /> },
   { to: '/model/earnings', label: 'Earnings', icon: <DollarSign className="w-5 h-5" /> },

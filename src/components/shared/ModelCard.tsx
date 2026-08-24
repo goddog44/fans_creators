@@ -9,9 +9,11 @@ interface ModelCardProps {
   model: User;
   onSubscribe?: (model: User) => void;
   isSubscribed?: boolean;
+  hasActiveStory?: boolean;
+  onStoryClick?: () => void;
 }
 
-export function ModelCard({ model, onSubscribe, isSubscribed }: ModelCardProps) {
+export function ModelCard({ model, onSubscribe, isSubscribed, hasActiveStory, onStoryClick }: ModelCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-ink-200/60 shadow-soft overflow-hidden group hover:shadow-card transition-all duration-300">
       {/* Cover */}
@@ -22,9 +24,15 @@ export function ModelCard({ model, onSubscribe, isSubscribed }: ModelCardProps) 
 
       {/* Avatar + Info */}
       <div className="px-4 pb-4 -mt-10 relative">
-        <Link to={`/model/${model.id}`}>
-          <Avatar src={model.avatar} size="xl" ring className="border-4 border-white rounded-full" />
-        </Link>
+        {hasActiveStory && onStoryClick ? (
+          <button type="button" onClick={onStoryClick} className="rounded-full bg-gradient-to-tr from-brand-500 via-danger-500 to-accent-500 p-1" aria-label={`View ${model.name}'s story`}>
+            <Avatar src={model.avatar} emoji={model.avatarEmoji} size="xl" className="border-4 border-white rounded-full" />
+          </button>
+        ) : (
+          <Link to={`/model/${model.id}`}>
+            <Avatar src={model.avatar} size="xl" ring className="border-4 border-white rounded-full" />
+          </Link>
+        )}
         <div className="mt-3">
           <Link to={`/model/${model.id}`}>
             <div className="flex items-center gap-1">

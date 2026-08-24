@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { UserShell } from '@/components/layout/UserShell';
+import { RoleShell } from '@/components/layout/RoleShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -94,10 +94,10 @@ export function UserMessages() {
     toast('Content unlocked!', 'success');
   };
 
-  if (loading) return <UserShell><LoadingState /></UserShell>;
+  if (loading) return <RoleShell><LoadingState /></RoleShell>;
 
   return (
-    <UserShell>
+    <RoleShell>
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-display font-bold text-2xl text-ink-900">Messages</h1>
       </div>
@@ -251,6 +251,6 @@ export function UserMessages() {
           <Button onClick={handleSendPPV} className="w-full">Send PPV · ${ppvPrice}</Button>
         </div>
       </Modal>
-    </UserShell>
+    </RoleShell>
   );
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BadgeCheck, Users, Star, Calendar, Link2, Heart, Share2, MoreHorizontal, Lock, DollarSign, MessageCircle } from 'lucide-react';
-import { UserShell } from '@/components/layout/UserShell';
-import { DashboardShell } from '@/components/layout/DashboardShell';
+import { RoleShell } from '@/components/layout/RoleShell';
+import { StoryViewer } from '@/components/shared/StoryViewer';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -13,13 +13,13 @@ import { LoadingState, EmptyState } from '@/components/ui/States';
 import { PostCard } from '@/components/shared/PostCard';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { modelService, contentService, subscriptionService, userService, messageService } from '@/services';
-import type { User, Post } from '@/types';
+import { modelService, contentService, storyService, subscriptionService, userService, messageService } from '@/services';
+import type { Story, User, Post } from '@/types';
 import { formatTimeAgo, formatDate } from '@/lib/format';
 
 export function ModelProfile() {
   const { id } = useParams();
-  const { user, hasRole } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [model, setModel] = useState<User | null>(null);
@@ -30,6 +30,8 @@ export function ModelProfile() {
   const [showSubscribe, setShowSubscribe] = useState(false);
   const [plan, setPlan] = useState<'MONTHLY' | 'QUARTERLY' | 'YEARLY'>('MONTHLY');
   const [subscribing, setSubscribing] = useState(false);
+  const [profileStory, setProfileStory] = useState<Story | null>(null);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -37,10 +39,12 @@ export function ModelProfile() {
       modelService.getById(id),
       contentService.getPostsByModel(id),
       user ? subscriptionService.isSubscribed(user.id, id) : Promise.resolve(false),
-    ]).then(([m, p, subbed]) => {
+      storyService.getByModel(id),
+    ]).then(([m, p, subbed, stories]) => {
       setModel(m || null);
       setPosts(p);
       setIsSubscribed(subbed);
+      setProfileStory(stories[0] || null);
       setLoading(false);
     });
   }, [id, user]);
@@ -66,7 +70,7 @@ export function ModelProfile() {
     }
   };
 
-  const Shell = hasRole('USER') ? UserShell : ({ children }: any) => <DashboardShell navItems={[]} brandColor="ink">{children}</DashboardShell>;
+  const Shell = RoleShell;
 
   if (loading) return <Shell><LoadingState /></Shell>;
   if (!model) return <Shell><EmptyState title="Creator not found" /></Shell>;
@@ -82,7 +86,13 @@ export function ModelProfile() {
 
       {/* Profile header */}
       <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-6 -mt-24 sm:-mt-20 px-2 relative">
-        <Avatar src={model.avatar} size="2xl" ring className="border-4 border-white rounded-full flex-shrink-0" />
+        {profileStory ? (
+          <button type="button" onClick={() => setSelectedStory(profileStory)} className="rounded-full bg-gradient-to-tr from-brand-500 via-danger-500 to-accent-500 p-1" aria-label={`View ${model.name}'s story`}>
+            <Avatar src={model.avatar} emoji={model.avatarEmoji} size="2xl" className="border-4 border-white rounded-full flex-shrink-0" />
+          </button>
+        ) : (
+          <Avatar src={model.avatar} size="2xl" ring className="border-4 border-white rounded-full flex-shrink-0" />
+        )}
         <div className="flex-1 sm:pb-2">
           <div className="flex items-center gap-2">
             <h1 className="font-display font-bold text-2xl text-ink-900">{model.name}</h1>
@@ -222,6 +232,7 @@ export function ModelProfile() {
           <p className="text-xs text-center text-ink-400">By subscribing, you agree to the terms. Cancel anytime.</p>
         </div>
       </Modal>
+      <StoryViewer story={selectedStory} model={model} onClose={() => setSelectedStory(null)} />
     </Shell>
   );
 }
