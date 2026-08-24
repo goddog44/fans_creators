@@ -80,6 +80,20 @@ export interface Post {
   bookmarkedByUser?: boolean;
 }
 
+export interface Reel {
+  id: string;
+  modelId: string;
+  caption: string;
+  hashtags: string[];
+  visibility: Visibility;
+  mediaUrl: string;
+  storagePath: string;
+  createdAt: string;
+  views: number;
+  likedByUser?: boolean;
+  bookmarkedByUser?: boolean;
+}
+
 export interface Story {
   id: string;
   modelId: string;
@@ -138,6 +152,10 @@ export interface Message {
   read: boolean;
   createdAt: string;
   storyId?: string;
+  reelId?: string;
+  reelId?: string;
+  editedAt?: string;
+  deletedAt?: string;
 }
 
 export interface Conversation {

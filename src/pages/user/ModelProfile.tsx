@@ -87,10 +87,10 @@ export function ModelProfile() {
   };
 
   const Shell = RoleShell;
-  const replyToStory = async (text: string) => {
+  const replyToStory = async (text: string, story: Story) => {
     if (!user || !profileStory || !model) return;
     const conversation = await messageService.getOrCreateConversation(user.id, model.id);
-    await messageService.sendMessage(conversation.id, user.id, { type: 'TEXT', text: `[Story ${profileStory.id}] ${text}`, storyId: profileStory.id });
+    await messageService.sendMessage(conversation.id, user.id, { type: 'TEXT', text: `[Story ${story.id}] ${text}`, storyId: story.id });
     toast('Story reply sent', 'success');
   };
 

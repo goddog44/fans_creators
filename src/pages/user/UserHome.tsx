@@ -19,6 +19,7 @@ export function UserHome() {
   const [suggested, setSuggested] = useState<UserType[]>([]);
   const [activeStories, setActiveStories] = useState<Story[]>([]);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [viewedStoryIds, setViewedStoryIds] = useState<Set<string>>(new Set());
   const [feedPage, setFeedPage] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -45,7 +46,8 @@ export function UserHome() {
       subscriptionService.getByUser(user.id),
       modelService.getAll(),
       storyService.getActive(),
-    ]).then(([feed, subs, allModels, stories]) => {
+      storyService.getViewedIds(user.id),
+    ]).then(([feed, subs, allModels, stories, viewed]) => {
       setPosts(feed);
       const modelMap: Record<string, UserType> = {};
       allModels.forEach((m) => { modelMap[m.id] = m; });
@@ -53,6 +55,7 @@ export function UserHome() {
       setSubscriptions(new Set(subs.filter((s) => s.status === 'ACTIVE').map((s) => s.modelId)));
       setSuggested(allModels.filter((m) => !subs.some((s) => s.modelId === m.id)).slice(0, 3));
       setActiveStories(stories);
+      setViewedStoryIds(viewed);
       setFeedPage(0);
       setHasMore(feed.length === 8);
       setLoading(false);
@@ -71,20 +74,20 @@ export function UserHome() {
 
   if (loading) return <RoleShell><LoadingState /></RoleShell>;
 
-  const storyByModel = new Map<string, Story>();
-  activeStories.forEach((story) => {
-    if (!storyByModel.has(story.modelId)) storyByModel.set(story.modelId, story);
-  });
-  const storyModels = Array.from(storyByModel.values()).map((story) => ({
-    story,
-    model: models[story.modelId],
-  })).filter((item): item is { story: Story; model: UserType } => Boolean(item.model));
+  const storiesByModel = new Map<string, Story[]>();
+  activeStories.forEach((story) => storiesByModel.set(story.modelId, [...(storiesByModel.get(story.modelId) || []), story]));
+  const storyModels = Array.from(storiesByModel.entries()).map(([modelId, stories]) => ({ stories, model: models[modelId] })).filter((item): item is { stories: Story[]; model: UserType } => Boolean(item.model));
   const selectedModel = selectedStory ? models[selectedStory.modelId] : undefined;
-  const replyToStory = async (text: string) => {
-    if (!user || !selectedStory || !selectedModel) return;
+  const selectedStories = selectedStory ? storiesByModel.get(selectedStory.modelId) || [selectedStory] : [];
+  const replyToStory = async (text: string, story: Story) => {
+    if (!user || !selectedModel) return;
     const conversation = await messageService.getOrCreateConversation(user.id, selectedModel.id);
-    await messageService.sendMessage(conversation.id, user.id, { type: 'TEXT', text: `[Story ${selectedStory.id}] ${text}`, storyId: selectedStory.id });
+    await messageService.sendMessage(conversation.id, user.id, { type: 'TEXT', text: `[Story ${story.id}] ${text}`, storyId: story.id });
     toast('Story reply sent', 'success');
+  };
+  const markStoryViewed = (story: Story) => {
+    setViewedStoryIds((current) => new Set(current).add(story.id));
+    if (user) void storyService.markViewed(story.id, user.id);
   };
 
   return (
@@ -92,14 +95,15 @@ export function UserHome() {
       {storyModels.length > 0 && (
         <section className="mb-6" aria-label="Active stories">
           <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-            {storyModels.map(({ story, model }) => (
-              <button key={story.id} type="button" onClick={() => setSelectedStory(story)} className="flex w-20 shrink-0 flex-col items-center gap-2" aria-label={`View ${model.name}'s story`}>
-                <span className="rounded-full bg-gradient-to-tr from-brand-500 via-danger-500 to-accent-500 p-1">
+            {storyModels.map(({ stories, model }) => {
+              const hasUnseen = stories.some((story) => !viewedStoryIds.has(story.id));
+              return <button key={model.id} type="button" onClick={() => setSelectedStory(stories[0])} className="flex w-20 shrink-0 flex-col items-center gap-2" aria-label={`View ${model.name}'s stories`}>
+                <span className={`rounded-full p-1 ${hasUnseen ? 'bg-gradient-to-tr from-brand-500 via-danger-500 to-accent-500' : 'bg-ink-300'}`}>
                   <img src={model.avatar || '/image-removebg-preview.png'} alt="" className="h-16 w-16 rounded-full border-4 border-white bg-ink-100 object-cover" />
                 </span>
                 <span className="w-full truncate text-center text-xs font-semibold text-ink-700">{model.name}</span>
-              </button>
-            ))}
+              </button>;
+            })}
           </div>
         </section>
       )}
@@ -132,13 +136,13 @@ export function UserHome() {
             <h2 className="font-display font-bold text-lg text-ink-900 mb-3">Suggested for you</h2>
             <div className="space-y-3">
               {suggested.map((m) => (
-                <ModelCard key={m.id} model={m} hasActiveStory={storyByModel.has(m.id)} onStoryClick={() => setSelectedStory(storyByModel.get(m.id) || null)} />
+                <ModelCard key={m.id} model={m} hasActiveStory={storiesByModel.has(m.id)} onStoryClick={() => setSelectedStory(storiesByModel.get(m.id)?.[0] || null)} />
               ))}
             </div>
           </div>
         </div>
       </div>
-      <StoryViewer story={selectedStory} model={selectedModel} onClose={() => setSelectedStory(null)} onReply={replyToStory} />
+      <StoryViewer story={selectedStory} model={selectedModel} stories={selectedStories} models={models} onSeen={markStoryViewed} onClose={() => setSelectedStory(null)} onReply={replyToStory} />
     </RoleShell>
   );
 }

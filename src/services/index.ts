@@ -15,6 +15,7 @@ import type {
   ContentStatus,
   Visibility,
   Story,
+  Reel,
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -1076,6 +1077,9 @@ export const messageService = {
       read: row.read,
       createdAt: row.created_at,
       storyId: row.story_id || undefined,
+      reelId: row.reel_id || undefined,
+      editedAt: row.edited_at || undefined,
+      deletedAt: row.deleted_at || undefined,
     }));
   },
 
@@ -1101,6 +1105,9 @@ export const messageService = {
             read: row.read,
             createdAt: row.created_at,
             storyId: row.story_id || undefined,
+            reelId: row.reel_id || undefined,
+            editedAt: row.edited_at || undefined,
+            deletedAt: row.deleted_at || undefined,
           });
         }
       )
@@ -1111,7 +1118,7 @@ export const messageService = {
     };
   },
 
-  async sendMessage(conversationId: string, senderId: string, data: { type: Message['type']; text?: string; mediaUrl?: string; price?: number; storyId?: string }): Promise<Message> {
+  async sendMessage(conversationId: string, senderId: string, data: { type: Message['type']; text?: string; mediaUrl?: string; price?: number; storyId?: string; reelId?: string }): Promise<Message> {
     const { data: message, error } = await supabase
       .from('messages')
       .insert({
@@ -1123,6 +1130,7 @@ export const messageService = {
         price: data.price,
         unlocked: data.type !== 'PPV',
         story_id: data.storyId,
+        reel_id: data.reelId,
       })
       .select()
       .single();
@@ -1150,7 +1158,21 @@ export const messageService = {
       read: message.read,
       createdAt: message.created_at,
       storyId: message.story_id || undefined,
+      reelId: message.reel_id || undefined,
+      editedAt: message.edited_at || undefined,
+      deletedAt: message.deleted_at || undefined,
     };
+  },
+
+  async updateMessage(messageId: string, senderId: string, text: string): Promise<Message> {
+    const { data, error } = await supabase.from('messages').update({ text, edited_at: new Date().toISOString() }).eq('id', messageId).eq('sender_id', senderId).select().single();
+    if (error) throw new Error(error.message);
+    return { id: data.id, conversationId: data.conversation_id, senderId: data.sender_id, type: data.type, text: data.text, mediaUrl: data.media_url, price: data.price, unlocked: data.unlocked, read: data.read, createdAt: data.created_at, storyId: data.story_id || undefined, reelId: data.reel_id || undefined, editedAt: data.edited_at || undefined, deletedAt: data.deleted_at || undefined };
+  },
+
+  async deleteMessage(messageId: string, senderId: string): Promise<void> {
+    const { error } = await supabase.from('messages').update({ text: null, media_url: null, deleted_at: new Date().toISOString() }).eq('id', messageId).eq('sender_id', senderId);
+    if (error) throw new Error(error.message);
   },
 
   // Unlocking a PPV message is done by whoever is viewing it (the
@@ -1639,6 +1661,17 @@ export const storyService = {
     const { error } = await supabase.from('stories').delete().eq('id', id);
     if (error) throw new Error(error.message);
   },
+
+  async getViewedIds(userId: string): Promise<Set<string>> {
+    const { data, error } = await supabase.from('story_views').select('story_id').eq('user_id', userId);
+    if (error) throw new Error(error.message);
+    return new Set((data || []).map((row) => row.story_id));
+  },
+
+  async markViewed(storyId: string, userId: string): Promise<void> {
+    const { error } = await supabase.from('story_views').upsert({ story_id: storyId, user_id: userId }, { onConflict: 'story_id,user_id' });
+    if (error) throw new Error(error.message);
+  },
 };
 
 export const followService = {
@@ -1663,5 +1696,61 @@ export const followService = {
     const { error } = await supabase.from('follows').insert({ follower_id: authUser.user.id, following_id: followingId });
     if (error) throw new Error(error.message);
     return true;
+  },
+};
+
+export const reelService = {
+  mapReel(row: any, mediaUrl: string): Reel {
+    return { id: row.id, modelId: row.model_id, caption: row.caption || '', hashtags: row.hashtags || [], visibility: row.visibility, mediaUrl, storagePath: row.storage_path, createdAt: row.created_at, views: row.views_count || 0 };
+  },
+
+  async getAll(): Promise<Reel[]> {
+    const { data, error } = await supabase.from('reels').select('*').order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return Promise.all((data || []).map(async (row) => {
+      const signed = await supabase.storage.from('post-media').createSignedUrl(row.storage_path, 3600);
+      if (signed.error) throw new Error(signed.error.message);
+      return this.mapReel(row, signed.data.signedUrl);
+    }));
+  },
+
+  async create(modelId: string, file: File, caption: string, hashtags: string[], visibility: Visibility): Promise<Reel> {
+    if (!file.type.startsWith('video/')) throw new Error('A Reel must be a video');
+    const uploaded = await contentService.uploadMedia(file, modelId, `reel-${crypto.randomUUID()}`);
+    const { data, error } = await supabase.from('reels').insert({ model_id: modelId, caption, hashtags, visibility, storage_path: uploaded.storagePath }).select().single();
+    if (error) {
+      await supabase.storage.from('post-media').remove([uploaded.storagePath]);
+      throw new Error(error.message);
+    }
+    const signed = await supabase.storage.from('post-media').createSignedUrl(uploaded.storagePath, 3600);
+    if (signed.error) throw new Error(signed.error.message);
+    return this.mapReel(data, signed.data.signedUrl);
+  },
+
+  async toggleLike(reelId: string): Promise<boolean> {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser.user) throw new Error('Not authenticated');
+    const existing = await supabase.from('reel_likes').select('reel_id').eq('reel_id', reelId).eq('user_id', authUser.user.id).maybeSingle();
+    if (existing.error) throw new Error(existing.error.message);
+    if (existing.data) { await supabase.from('reel_likes').delete().eq('reel_id', reelId).eq('user_id', authUser.user.id); return false; }
+    const { error } = await supabase.from('reel_likes').insert({ reel_id: reelId, user_id: authUser.user.id });
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  async toggleBookmark(reelId: string): Promise<boolean> {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser.user) throw new Error('Not authenticated');
+    const existing = await supabase.from('reel_bookmarks').select('reel_id').eq('reel_id', reelId).eq('user_id', authUser.user.id).maybeSingle();
+    if (existing.error) throw new Error(existing.error.message);
+    if (existing.data) { await supabase.from('reel_bookmarks').delete().eq('reel_id', reelId).eq('user_id', authUser.user.id); return false; }
+    const { error } = await supabase.from('reel_bookmarks').insert({ reel_id: reelId, user_id: authUser.user.id });
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  async countView(reelId: string): Promise<void> {
+    const { error } = await supabase.rpc('increment_reel_views', { target_reel_id: reelId });
+    if (error) throw new Error(error.message);
   },
 };

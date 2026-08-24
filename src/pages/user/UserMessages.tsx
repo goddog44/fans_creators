@@ -11,7 +11,7 @@ import { useToast } from '@/context/ToastContext';
 import { messageService, userService } from '@/services';
 import type { Conversation, Message, User as UserType } from '@/types';
 import { formatTimeAgo } from '@/lib/format';
-import { Send, ImageIcon, DollarSign, Lock, ArrowLeft, Search, Paperclip } from 'lucide-react';
+import { Send, ImageIcon, DollarSign, Lock, ArrowLeft, Search, Paperclip, MoreHorizontal, Pencil, Trash2, Info } from 'lucide-react';
 
 export function UserMessages() {
   const { user } = useAuth();
@@ -27,6 +27,10 @@ export function UserMessages() {
   const [ppvPrice, setPpvPrice] = useState(5);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messageMenu, setMessageMenu] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [messageDraft, setMessageDraft] = useState('');
+  const [detailsMessage, setDetailsMessage] = useState<Message | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -92,6 +96,21 @@ export function UserMessages() {
     const updated = await messageService.unlockMessage(msgId);
     setMessages((prev) => prev.map((m) => (m.id === msgId ? updated : m)));
     toast('Content unlocked!', 'success');
+  };
+
+  const handleEditMessage = async (message: Message) => {
+    if (!user || !messageDraft.trim()) return;
+    const updated = await messageService.updateMessage(message.id, user.id, messageDraft.trim());
+    setMessages((current) => current.map((item) => item.id === updated.id ? updated : item));
+    setEditingMessage(null);
+    setMessageMenu(null);
+  };
+
+  const handleDeleteMessage = async (message: Message) => {
+    if (!user) return;
+    await messageService.deleteMessage(message.id, user.id);
+    setMessages((current) => current.map((item) => item.id === message.id ? { ...item, text: undefined, mediaUrl: undefined, deletedAt: new Date().toISOString() } : item));
+    setMessageMenu(null);
   };
 
   if (loading) return <RoleShell><LoadingState /></RoleShell>;
@@ -178,6 +197,8 @@ export function UserMessages() {
                   return (
                     <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+                        <div className="relative">
+                        {msg.deletedAt ? <div className="rounded-2xl border border-ink-200 bg-ink-100 px-4 py-2.5 text-sm italic text-ink-500">Message deleted</div> : editingMessage === msg.id ? <div className="flex gap-2 rounded-2xl bg-white p-2"><input value={messageDraft} onChange={(event) => setMessageDraft(event.target.value)} className="min-w-0 rounded-lg border border-ink-200 px-2 py-1 text-sm" /><button onClick={() => void handleEditMessage(msg)} className="text-xs font-semibold text-brand-600">Save</button></div> : <>
                         {msg.type === 'PPV' ? (
                           <div className={`rounded-2xl p-4 ${isMe ? 'bg-brand-600 text-white' : 'bg-white border border-ink-200'}`}>
                             <div className="flex items-center gap-2 mb-2">
@@ -195,18 +216,25 @@ export function UserMessages() {
                               </Button>
                             )}
                           </div>
-                        ) : msg.type === 'IMAGE' ? (
+                        ) : msg.type === 'IMAGE' || msg.type === 'VIDEO' ? (
                           <div className={`rounded-2xl overflow-hidden ${isMe ? 'bg-brand-600' : 'bg-white border border-ink-200'}`}>
-                            <img src={msg.mediaUrl} alt="" className="w-full max-w-xs" />
+                            {msg.type === 'VIDEO' ? <video src={msg.mediaUrl} controls playsInline className="w-full max-w-xs" /> : <img src={msg.mediaUrl} alt="" className="w-full max-w-xs" />}
                             {msg.text && <p className="p-2 text-sm">{msg.text}</p>}
                           </div>
                         ) : (
                           <div className={`rounded-2xl px-4 py-2.5 ${isMe ? 'bg-brand-600 text-white' : 'bg-white border border-ink-200 text-ink-800'}`}>
                             {msg.storyId && <p className="mb-1 text-xs font-semibold opacity-70">Reply to Story</p>}
+                            {msg.reelId && <p className="mb-1 text-xs font-semibold opacity-70">Shared Reel</p>}
+                            {msg.reelId && <a href={`/reels/${msg.reelId}`} className="mb-2 block text-xs underline opacity-80">Open Reel</a>}
                             <p className="text-sm">{msg.text}</p>
                           </div>
                         )}
+                        </>}
+                        {isMe && !msg.deletedAt && <div className="absolute -right-8 top-0"><button onClick={() => setMessageMenu(messageMenu === msg.id ? null : msg.id)} className="rounded-full p-1 text-ink-400 hover:bg-ink-200" aria-label="Message actions"><MoreHorizontal className="h-4 w-4" /></button>{messageMenu === msg.id && <div className="absolute right-0 z-20 w-32 rounded-xl border border-ink-200 bg-white py-1 text-xs shadow-card"><button onClick={() => { setEditingMessage(msg.id); setMessageDraft(msg.text || ''); setMessageMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 hover:bg-ink-50"><Pencil className="h-3 w-3" /> Edit</button><button onClick={() => void handleDeleteMessage(msg)} className="flex w-full items-center gap-2 px-3 py-2 text-danger-600 hover:bg-danger-50"><Trash2 className="h-3 w-3" /> Delete</button><button onClick={() => { setDetailsMessage(msg); setMessageMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 hover:bg-ink-50"><Info className="h-3 w-3" /> Details</button></div>}</div>}
+                        {!isMe && <button onClick={() => setDetailsMessage(msg)} className="ml-1 mt-1 text-ink-400" aria-label="Message details"><Info className="h-3 w-3" /></button>}
+                        </div>
                         <span className="text-xs text-ink-400 mt-1 px-1">{formatTimeAgo(msg.createdAt)}</span>
+                        {msg.editedAt && !msg.deletedAt && <span className="text-[10px] text-ink-400">edited</span>}
                       </div>
                     </div>
                   );
@@ -251,6 +279,9 @@ export function UserMessages() {
           </div>
           <Button onClick={handleSendPPV} className="w-full">Send PPV · ${ppvPrice}</Button>
         </div>
+      </Modal>
+      <Modal open={!!detailsMessage} onClose={() => setDetailsMessage(null)} title="Message details" size="sm">
+        {detailsMessage && <div className="space-y-2 text-sm text-ink-700"><p><strong>Type:</strong> {detailsMessage.type}</p><p><strong>Sent:</strong> {new Date(detailsMessage.createdAt).toLocaleString()}</p><p><strong>Status:</strong> {detailsMessage.deletedAt ? 'Deleted' : detailsMessage.read ? 'Read' : 'Sent'}</p>{detailsMessage.type === 'PPV' && <p><strong>Price:</strong> ${detailsMessage.price}</p>}{detailsMessage.editedAt && <p><strong>Edited:</strong> {new Date(detailsMessage.editedAt).toLocaleString()}</p>}</div>}
       </Modal>
     </RoleShell>
   );

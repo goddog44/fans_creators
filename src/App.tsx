@@ -21,12 +21,14 @@ import { UserNotifications } from '@/pages/user/UserNotifications';
 import { UserBookmarks } from '@/pages/user/UserBookmarks';
 import { UserPayments } from '@/pages/user/UserPayments';
 import { UserProfile } from '@/pages/user/UserProfile';
+import { ReelsPage } from '@/pages/user/ReelsPage';
 import { PostPage } from '@/pages/user/PostPage';
 
 // Model
 import { ModelDashboard } from '@/pages/model/ModelDashboard';
 import { ModelContent } from '@/pages/model/ModelContent';
 import { ModelStories } from '@/pages/model/ModelStories';
+import { ModelReels } from '@/pages/model/ModelReels';
 import { ModelSubscribers } from '@/pages/model/ModelSubscribers';
 import { ModelMessages } from '@/pages/model/ModelMessages';
 import { ModelEarnings } from '@/pages/model/ModelEarnings';
@@ -73,6 +75,8 @@ function AppRoutes() {
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/explore" element={<ProtectedRoute roles={allRoles}><UserExplore /></ProtectedRoute>} />
+      <Route path="/reels" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
+      <Route path="/reels/:id" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -94,6 +98,7 @@ function AppRoutes() {
       <Route path="/model" element={<ProtectedRoute roles={['MODEL']}><ModelDashboard /></ProtectedRoute>} />
       <Route path="/model/content" element={<ProtectedRoute roles={['MODEL']}><ModelContent /></ProtectedRoute>} />
       <Route path="/model/stories" element={<ProtectedRoute roles={['MODEL']}><ModelStories /></ProtectedRoute>} />
+      <Route path="/model/reels" element={<ProtectedRoute roles={['MODEL']}><ModelReels /></ProtectedRoute>} />
       <Route path="/model/subscribers" element={<ProtectedRoute roles={['MODEL']}><ModelSubscribers /></ProtectedRoute>} />
       <Route path="/model/messages" element={<ProtectedRoute roles={['MODEL']}><ModelMessages /></ProtectedRoute>} />
       <Route path="/model/earnings" element={<ProtectedRoute roles={['MODEL']}><ModelEarnings /></ProtectedRoute>} />
