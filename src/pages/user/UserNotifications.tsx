@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RoleShell } from '@/components/layout/RoleShell';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { Button } from '@/components/ui/Button';
@@ -6,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { notificationService } from '@/services';
 import type { Notification } from '@/types';
 import { formatTimeAgo } from '@/lib/format';
-import { Bell, MessageSquare, CreditCard, DollarSign, UserPlus, Gift, CheckCheck } from 'lucide-react';
+import { Bell, MessageSquare, CreditCard, DollarSign, UserPlus, Gift, CheckCheck, Heart, MessageCircle, UserRound } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
   NEW_MESSAGE: MessageSquare,
@@ -16,12 +17,20 @@ const iconMap: Record<string, any> = {
   PPV_PURCHASE: Lock,
   NEW_SUBSCRIBER: UserPlus,
   TIP_RECEIVED: Gift,
+  FOLLOW: UserRound,
+  POST_LIKE: Heart,
+  REEL_LIKE: Heart,
+  POST_COMMENT: MessageCircle,
+  REEL_COMMENT: MessageCircle,
+  STORY_REPLY: MessageSquare,
+  PPV_RECEIVED: DollarSign,
 };
 
 import { Lock } from 'lucide-react';
 
 export function UserNotifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,6 +40,9 @@ export function UserNotifications() {
       setNotifs(n);
       setLoading(false);
     });
+    return notificationService.subscribeToUser(user.id, (notification) => {
+      setNotifs((current) => [notification, ...current]);
+    });
   }, [user]);
 
   const handleMarkAll = async () => {
@@ -39,9 +51,10 @@ export function UserNotifications() {
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const handleMarkRead = async (id: string) => {
-    await notificationService.markRead(id);
-    setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const handleNotificationClick = async (notification: Notification) => {
+    await notificationService.markRead(notification.id);
+    setNotifs((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
+    if (notification.link) navigate(notification.link);
   };
 
   return (
@@ -69,7 +82,7 @@ export function UserNotifications() {
             return (
               <button
                 key={n.id}
-                onClick={() => handleMarkRead(n.id)}
+                onClick={() => void handleNotificationClick(n)}
                 className={`w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left ${
                   n.read ? 'bg-white border-ink-200/60' : 'bg-brand-50/50 border-brand-200'
                 }`}

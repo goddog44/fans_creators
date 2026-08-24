@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { RoleShell } from '@/components/layout/RoleShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
@@ -17,6 +17,7 @@ export function UserMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [participants, setParticipants] = useState<Record<string, UserType>>({});
   const [activeConv, setActiveConv] = useState<string | null>(null);
@@ -225,7 +226,7 @@ export function UserMessages() {
                           <div className={`rounded-2xl px-4 py-2.5 ${isMe ? 'bg-brand-600 text-white' : 'bg-white border border-ink-200 text-ink-800'}`}>
                             {msg.storyId && <p className="mb-1 text-xs font-semibold opacity-70">Reply to Story</p>}
                             {msg.reelId && <p className="mb-1 text-xs font-semibold opacity-70">Shared Reel</p>}
-                            {msg.reelId && <a href={`/reels/${msg.reelId}`} className="mb-2 block text-xs underline opacity-80">Open Reel</a>}
+                            {msg.reelId && <button type="button" onClick={() => navigate(`/reels/${msg.reelId}`)} className="mb-2 block text-xs underline opacity-80">Open Reel</button>}
                             <p className="text-sm">{msg.text}</p>
                           </div>
                         )}

@@ -7,6 +7,7 @@ import { roleLabel } from '@/lib/rbac';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/context/ToastContext';
 import { commonNavItems } from '@/lib/nav';
+import { notificationService } from '@/services';
 
 export interface NavItem {
   to: string;
@@ -28,6 +29,15 @@ export function DashboardShell({ navItems, children, brandColor = 'brand' }: Das
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    void notificationService.getUnreadCount(user.id).then(setUnreadNotifications).catch(() => setUnreadNotifications(0));
+    return notificationService.subscribeToUser(user.id, (notification) => {
+      if (!notification.read) setUnreadNotifications((count) => count + 1);
+    });
+  }, [user]);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -81,7 +91,7 @@ export function DashboardShell({ navItems, children, brandColor = 'brand' }: Das
           <div className="flex items-center gap-2">
             <button onClick={() => navigate(notificationRoute)} className="relative p-2 rounded-lg hover:bg-ink-100 transition-colors">
               <Bell className="w-5 h-5 text-ink-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full" />
+              {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-brand-500 text-white text-[10px] leading-4 text-center rounded-full">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>}
             </button>
             <div className="relative">
               <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 p-1 pr-2 rounded-xl hover:bg-ink-100 transition-colors">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Bell, CheckCheck, AlertTriangle, BadgeCheck, Wallet, DollarSign, Flag, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, AlertTriangle, BadgeCheck, Wallet, DollarSign, Flag, TrendingUp, Heart, MessageCircle, MessageSquare, UserRound } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { PageHeader } from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/Button';
@@ -17,10 +18,18 @@ const iconMap: Record<string, any> = {
   PAYOUT_ATTENTION: Wallet,
   NEW_MODEL: Bell,
   PERFORMANCE_ALERT: TrendingUp,
+  FOLLOW: UserRound,
+  POST_LIKE: Heart,
+  REEL_LIKE: Heart,
+  POST_COMMENT: MessageCircle,
+  REEL_COMMENT: MessageCircle,
+  STORY_REPLY: MessageSquare,
+  PPV_RECEIVED: DollarSign,
 };
 
 export function AdminNotifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +39,7 @@ export function AdminNotifications() {
       setNotifs(n);
       setLoading(false);
     });
+    return notificationService.subscribeToUser(user.id, (notification) => setNotifs((current) => [notification, ...current]));
   }, [user]);
 
   const handleMarkAll = async () => {
@@ -38,9 +48,10 @@ export function AdminNotifications() {
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const handleMarkRead = async (id: string) => {
-    await notificationService.markRead(id);
-    setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const handleNotificationClick = async (notification: Notification) => {
+    await notificationService.markRead(notification.id);
+    setNotifs((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
+    if (notification.link) navigate(notification.link);
   };
 
   return (
@@ -55,8 +66,8 @@ export function AdminNotifications() {
         <div className="space-y-2">
           {notifs.map((n) => {
             const Icon = iconMap[n.type] || Bell;
-            return (
-              <button key={n.id} onClick={() => handleMarkRead(n.id)} className={`w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left ${n.read ? 'bg-white border-ink-200/60' : 'bg-ink-50 border-ink-300'}`}>
+              return (
+                <button key={n.id} onClick={() => void handleNotificationClick(n)} className={`w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left ${n.read ? 'bg-white border-ink-200/60' : 'bg-ink-50 border-ink-300'}`}>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${n.read ? 'bg-ink-100 text-ink-500' : 'bg-ink-900 text-white'}`}><Icon className="w-5 h-5" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

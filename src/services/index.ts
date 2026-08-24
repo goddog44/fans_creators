@@ -1477,7 +1477,7 @@ export const notificationService = {
       userId: row.user_id,
       type: row.type,
       title: row.title,
-      body: row.body,
+      body: row.body || '',
       read: row.read,
       link: row.link,
       createdAt: row.created_at,
@@ -1508,6 +1508,26 @@ export const notificationService = {
 
     if (error) throw new Error(error.message);
     return count || 0;
+  },
+
+  subscribeToUser(userId: string, onNotification: (notification: Notification) => void): () => void {
+    const channel = supabase
+      .channel(`notifications:${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, ({ new: row }) => {
+        onNotification({
+          id: row.id,
+          userId: row.user_id,
+          type: row.type,
+          title: row.title,
+          body: row.body || '',
+          read: row.read,
+          link: row.link,
+          createdAt: row.created_at,
+        });
+      })
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
   },
 };
 

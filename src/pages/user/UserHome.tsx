@@ -3,7 +3,7 @@ import { RoleShell } from '@/components/layout/RoleShell';
 import { PostCard } from '@/components/shared/PostCard';
 import { ModelCard } from '@/components/shared/ModelCard';
 import { StoryViewer } from '@/components/shared/StoryViewer';
-import { LoadingState, EmptyState } from '@/components/ui/States';
+import { LoadingState, EmptyState, ErrorState } from '@/components/ui/States';
 import { useAuth } from '@/context/AuthContext';
 import { contentService, messageService, modelService, storyService, subscriptionService } from '@/services';
 import { useToast } from '@/context/ToastContext';
@@ -23,6 +23,7 @@ export function UserHome() {
   const [feedPage, setFeedPage] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
 
   const loadMorePosts = useCallback(async () => {
@@ -39,28 +40,45 @@ export function UserHome() {
     }
   }, [feedPage, hasMore, loadingMore, user]);
 
-  useEffect(() => {
+  const loadHome = useCallback(async () => {
     if (!user) return;
-    Promise.all([
-      contentService.getFeedPosts(user.id, 0),
-      subscriptionService.getByUser(user.id),
-      modelService.getAll(),
-      storyService.getActive(),
-      storyService.getViewedIds(user.id),
-    ]).then(([feed, subs, allModels, stories, viewed]) => {
+    setLoading(true);
+    setLoadError(null);
+
+    try {
+      const feed = await contentService.getFeedPosts(user.id, 0);
       setPosts(feed);
-      const modelMap: Record<string, UserType> = {};
-      allModels.forEach((m) => { modelMap[m.id] = m; });
-      setModels(modelMap);
-      setSubscriptions(new Set(subs.filter((s) => s.status === 'ACTIVE').map((s) => s.modelId)));
-      setSuggested(allModels.filter((m) => !subs.some((s) => s.modelId === m.id)).slice(0, 3));
-      setActiveStories(stories);
-      setViewedStoryIds(viewed);
       setFeedPage(0);
       setHasMore(feed.length === 8);
+
+      const [subsResult, modelsResult, storiesResult, viewedResult] = await Promise.allSettled([
+        subscriptionService.getByUser(user.id),
+        modelService.getAll(),
+        storyService.getActive(),
+        storyService.getViewedIds(user.id),
+      ]);
+      const subs = subsResult.status === 'fulfilled' ? subsResult.value : [];
+      const allModels = modelsResult.status === 'fulfilled' ? modelsResult.value : [];
+      const stories = storiesResult.status === 'fulfilled' ? storiesResult.value : [];
+      const viewed = viewedResult.status === 'fulfilled' ? viewedResult.value : new Set<string>();
+      const modelMap: Record<string, UserType> = {};
+      allModels.forEach((model) => { modelMap[model.id] = model; });
+      setModels(modelMap);
+      setSubscriptions(new Set(subs.filter((subscription) => subscription.status === 'ACTIVE').map((subscription) => subscription.modelId)));
+      setSuggested(allModels.filter((model) => !subs.some((subscription) => subscription.modelId === model.id)).slice(0, 3));
+      setActiveStories(stories);
+      setViewedStoryIds(viewed);
+    } catch (error) {
+      console.error('Failed to load home feed:', error);
+      setLoadError(error instanceof Error ? error.message : 'Unable to load your feed.');
+    } finally {
       setLoading(false);
-    });
+    }
   }, [user]);
+
+  useEffect(() => {
+    void loadHome();
+  }, [loadHome]);
 
   useEffect(() => {
     const target = feedEndRef.current;
@@ -73,6 +91,7 @@ export function UserHome() {
   }, [loadMorePosts]);
 
   if (loading) return <RoleShell><LoadingState /></RoleShell>;
+  if (loadError) return <RoleShell><ErrorState message={loadError} onRetry={() => void loadHome()} /></RoleShell>;
 
   const storiesByModel = new Map<string, Story[]>();
   activeStories.forEach((story) => storiesByModel.set(story.modelId, [...(storiesByModel.get(story.modelId) || []), story]));

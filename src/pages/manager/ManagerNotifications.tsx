@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Bell, CheckCheck, FileText, TrendingUp, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, FileText, TrendingUp, UserPlus, Heart, MessageCircle, MessageSquare, UserRound } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { PageHeader } from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/Button';
@@ -15,10 +16,17 @@ const iconMap: Record<string, any> = {
   PERFORMANCE_ALERT: TrendingUp,
   NEW_MODEL: UserPlus,
   NEW_SUBSCRIBER: UserPlus,
+  FOLLOW: UserRound,
+  POST_LIKE: Heart,
+  REEL_LIKE: Heart,
+  POST_COMMENT: MessageCircle,
+  REEL_COMMENT: MessageCircle,
+  STORY_REPLY: MessageSquare,
 };
 
 export function ManagerNotifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +36,7 @@ export function ManagerNotifications() {
       setNotifs(n);
       setLoading(false);
     });
+    return notificationService.subscribeToUser(user.id, (notification) => setNotifs((current) => [notification, ...current]));
   }, [user]);
 
   const handleMarkAll = async () => {
@@ -36,9 +45,10 @@ export function ManagerNotifications() {
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const handleMarkRead = async (id: string) => {
-    await notificationService.markRead(id);
-    setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const handleNotificationClick = async (notification: Notification) => {
+    await notificationService.markRead(notification.id);
+    setNotifs((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
+    if (notification.link) navigate(notification.link);
   };
 
   return (
@@ -53,8 +63,8 @@ export function ManagerNotifications() {
         <div className="space-y-2">
           {notifs.map((n) => {
             const Icon = iconMap[n.type] || Bell;
-            return (
-              <button key={n.id} onClick={() => handleMarkRead(n.id)} className={`w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left ${n.read ? 'bg-white border-ink-200/60' : 'bg-accent-50/50 border-accent-200'}`}>
+              return (
+                <button key={n.id} onClick={() => void handleNotificationClick(n)} className={`w-full flex items-start gap-3 p-4 rounded-2xl border transition-all text-left ${n.read ? 'bg-white border-ink-200/60' : 'bg-accent-50/50 border-accent-200'}`}>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${n.read ? 'bg-ink-100 text-ink-500' : 'bg-accent-100 text-accent-600'}`}><Icon className="w-5 h-5" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

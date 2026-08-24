@@ -74,6 +74,8 @@ function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/landing/home" element={<ProtectedRoute roles={allRoles}><UserHome /></ProtectedRoute>} />
       <Route path="/explore" element={<ProtectedRoute roles={allRoles}><UserExplore /></ProtectedRoute>} />
       <Route path="/reels" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels/:id" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />

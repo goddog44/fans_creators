@@ -4,6 +4,7 @@ import { Home, Compass, CreditCard, MessageSquare, Bell, Bookmark, User, Search,
 import { useAuth } from '@/context/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/context/ToastContext';
+import { notificationService } from '@/services';
 
 const navItems = [
   { to: '/home', label: 'Home', icon: Home },
@@ -26,6 +27,15 @@ export function UserShell({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    void notificationService.getUnreadCount(user.id).then(setUnreadNotifications).catch(() => setUnreadNotifications(0));
+    return notificationService.subscribeToUser(user.id, (notification) => {
+      if (!notification.read) setUnreadNotifications((count) => count + 1);
+    });
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -79,7 +89,7 @@ export function UserShell({ children }: { children: ReactNode }) {
             </button>
             <button onClick={() => navigate('/notifications')} className="relative p-2 rounded-lg hover:bg-ink-100 transition-colors lg:hidden">
               <Bell className="w-5 h-5 text-ink-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full" />
+              {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-brand-500 text-white text-[10px] leading-4 text-center rounded-full">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>}
             </button>
             <button onClick={() => navigate('/profile')} className="lg:hidden">
               <Avatar src={user?.avatar || ''} emoji={user?.avatarEmoji} size="sm" />

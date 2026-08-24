@@ -22,15 +22,19 @@ export function StoryViewer({ story, model, onClose, onReply, stories = [], mode
   const currentModel = currentStory ? (models[currentStory.modelId] || model) : undefined;
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => { setIndex(Math.max(0, sequence.findIndex((item) => item.id === story.id))); }, [story.id]);
   useEffect(() => {
+    if (!story) return;
+    setIndex(Math.max(0, sequence.findIndex((item) => item.id === story.id)));
+  }, [sequence, story]);
+  useEffect(() => {
+    if (!currentStory) return;
     onSeen?.(currentStory);
     if (currentStory.mediaType !== 'VIDEO') {
       const timer = window.setTimeout(() => setIndex((value) => value + 1), 6000);
       return () => window.clearTimeout(timer);
     }
     return undefined;
-  }, [currentStory.id, onSeen]);
+  }, [currentStory, onSeen]);
   useEffect(() => { if (index >= sequence.length) onClose(); }, [index, sequence.length, onClose]);
 
   const submitReply = async () => {
