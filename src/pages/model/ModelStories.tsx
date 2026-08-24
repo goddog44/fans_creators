@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CirclePlay, Plus, Trash2 } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/DashboardShell';
+import { StoryViewer } from '@/components/shared/StoryViewer';
 import { PageHeader } from '@/components/shared/StatCard';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -23,6 +24,7 @@ export function ModelStories() {
   const [saving, setSaving] = useState(false);
   const [mediaFile, setMediaFile] = useState<File>();
   const [background, setBackground] = useState('linear-gradient(135deg, #111827, #374151)');
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const backgrounds = ['linear-gradient(135deg, #111827, #374151)', 'linear-gradient(135deg, #be123c, #f97316)', 'linear-gradient(135deg, #0f766e, #164e63)', 'linear-gradient(135deg, #312e81, #7c3aed)', 'linear-gradient(135deg, #f59e0b, #dc2626)', '#f8fafc'];
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export function ModelStories() {
           {stories.map((story) => (
             <Card key={story.id}>
               <CardBody>
-                <p className="text-sm text-ink-800 whitespace-pre-wrap mb-4">{story.text}</p>
+                <button type="button" onClick={() => setSelectedStory(story)} className="w-full text-left"><p className="text-sm text-ink-800 whitespace-pre-wrap mb-4">{story.text}</p></button>
                 <div className="flex items-center justify-between text-xs text-ink-500">
                   <span>{new Date(story.createdAt).toLocaleString()}</span>
                   <Button size="sm" variant="ghost" onClick={() => removeStory(story.id)} className="text-danger-600" title="Delete story"><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -99,6 +101,7 @@ export function ModelStories() {
           ))}
         </div>
       )}
+      <StoryViewer story={selectedStory} model={user || undefined} onClose={() => setSelectedStory(null)} />
     </DashboardShell>
   );
 }

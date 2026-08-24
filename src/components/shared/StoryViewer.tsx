@@ -1,7 +1,8 @@
-import { Send, X } from 'lucide-react';
+import { Send, Share2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { Story, User } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
+import { storyPath } from '@/lib/contentRoutes';
 
 interface StoryViewerProps {
   story: Story | null;
@@ -45,6 +46,11 @@ export function StoryViewer({ story, model, onClose, onReply, stories = [], mode
 
   const goPrevious = () => setIndex((value) => value > 0 ? value - 1 : value);
   const goNext = () => setIndex((value) => value + 1);
+  const shareStory = async () => {
+    const url = `${window.location.origin}${storyPath(currentStory.id)}`;
+    if (navigator.share) await navigator.share({ title: `${currentModel?.name || 'Story'}'s Story`, url }).catch(() => {});
+    else await navigator.clipboard.writeText(url);
+  };
   if (!currentStory || !currentModel) return null;
 
   return (
@@ -61,9 +67,9 @@ export function StoryViewer({ story, model, onClose, onReply, stories = [], mode
               <p className="text-xs text-white/60">@{currentModel.username}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white" aria-label="Close story">
+          <div className="flex items-center gap-1"><button type="button" onClick={() => void shareStory()} className="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white" aria-label="Share story"><Share2 className="h-5 w-5" /></button><button type="button" onClick={onClose} className="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white" aria-label="Close story">
             <X className="h-5 w-5" />
-          </button>
+          </button></div>
         </div>
         <div className="relative flex flex-1 items-center justify-center p-8 text-center" style={!currentStory.mediaUrl ? { background: currentStory.background } : undefined}>
           <button type="button" onClick={goPrevious} className="absolute inset-y-0 left-0 z-10 w-1/3" aria-label="Previous story" />

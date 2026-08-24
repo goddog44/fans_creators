@@ -33,7 +33,6 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     UPDATE public.reels SET comments_count = comments_count + 1 WHERE id = NEW.reel_id;
-    UPDATE public.reel_comments SET likes_count = likes_count WHERE id = NEW.id;
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
     UPDATE public.reels SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = OLD.reel_id;
@@ -54,3 +53,18 @@ DROP TRIGGER IF EXISTS reel_comments_count_trigger ON public.reel_comments;
 CREATE TRIGGER reel_comments_count_trigger AFTER INSERT OR DELETE ON public.reel_comments FOR EACH ROW EXECUTE FUNCTION public.update_reel_comment_counts();
 DROP TRIGGER IF EXISTS reel_comment_likes_count_trigger ON public.reel_comment_likes;
 CREATE TRIGGER reel_comment_likes_count_trigger AFTER INSERT OR DELETE ON public.reel_comment_likes FOR EACH ROW EXECUTE FUNCTION public.update_reel_comment_like_count();
+
+CREATE OR REPLACE FUNCTION public.notify_reel_comment()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE owner_id uuid; actor_name text;
+BEGIN
+  SELECT r.model_id, p.name INTO owner_id, actor_name
+  FROM public.reels r JOIN public.profiles p ON p.id = NEW.user_id WHERE r.id = NEW.reel_id;
+  IF owner_id IS NOT NULL AND owner_id <> NEW.user_id THEN
+    PERFORM public.create_notification(owner_id, 'REEL_COMMENT', actor_name || ' commented on your Reel', NEW.text, '/reel/' || NEW.reel_id);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS notifications_reel_comment ON public.reel_comments;
+CREATE TRIGGER notifications_reel_comment AFTER INSERT ON public.reel_comments FOR EACH ROW EXECUTE FUNCTION public.notify_reel_comment();

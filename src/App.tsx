@@ -24,6 +24,7 @@ import { UserProfile } from '@/pages/user/UserProfile';
 import { ReelsPage } from '@/pages/user/ReelsPage';
 import { PostPage } from '@/pages/user/PostPage';
 import { StoryPage } from '@/pages/user/StoryPage';
+import { UserStories } from '@/pages/user/UserStories';
 
 // Model
 import { ModelDashboard } from '@/pages/model/ModelDashboard';
@@ -82,6 +83,7 @@ function AppRoutes() {
       <Route path="/reel/:id" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels/:id" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
       <Route path="/story/:id" element={<ProtectedRoute roles={allRoles}><StoryPage /></ProtectedRoute>} />
+      <Route path="/stories" element={<ProtectedRoute roles={allRoles}><UserStories /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
