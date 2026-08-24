@@ -87,6 +87,11 @@ export interface Story {
   createdAt: string;
   expiresAt: string;
   durationHours: number;
+  mediaType?: 'IMAGE' | 'VIDEO';
+  mediaUrl?: string;
+  storagePath?: string;
+  visibility: 'PUBLIC' | 'PRIVATE';
+  background?: string;
 }
 
 export interface PostMedia {
@@ -132,6 +137,7 @@ export interface Message {
   unlocked?: boolean;
   read: boolean;
   createdAt: string;
+  storyId?: string;
 }
 
 export interface Conversation {

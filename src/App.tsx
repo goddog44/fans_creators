@@ -21,6 +21,7 @@ import { UserNotifications } from '@/pages/user/UserNotifications';
 import { UserBookmarks } from '@/pages/user/UserBookmarks';
 import { UserPayments } from '@/pages/user/UserPayments';
 import { UserProfile } from '@/pages/user/UserProfile';
+import { PostPage } from '@/pages/user/PostPage';
 
 // Model
 import { ModelDashboard } from '@/pages/model/ModelDashboard';
@@ -81,6 +82,7 @@ function AppRoutes() {
       <Route path="/home" element={<ProtectedRoute roles={allRoles}><UserHome /></ProtectedRoute>} />
       <Route path="/user/explore" element={<ProtectedRoute roles={allRoles}><UserExplore /></ProtectedRoute>} />
       <Route path="/model/:id" element={<ProtectedRoute roles={allRoles}><ModelProfile /></ProtectedRoute>} />
+      <Route path="/post/:id" element={<ProtectedRoute roles={allRoles}><PostPage /></ProtectedRoute>} />
       <Route path="/subscriptions" element={<ProtectedRoute roles={allRoles}><UserSubscriptions /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute roles={allRoles}><UserMessages /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute roles={allRoles}><UserNotifications /></ProtectedRoute>} />

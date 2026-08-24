@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, Share2, DollarSign, Lock, MoreHorizontal, BadgeCheck, ChevronLeft, ChevronRight, Maximize2, ImageOff } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Share2, DollarSign, Lock, MoreHorizontal, BadgeCheck, ChevronLeft, ChevronRight, Maximize2, Pencil, Trash2 } from 'lucide-react';
 import type { Post, User, Comment as PostComment } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
-import { contentService } from '@/services';
+import { contentService, reportService } from '@/services';
 import { formatTimeAgo } from '@/lib/format';
 
 interface PostCardProps {
@@ -38,6 +38,9 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
   const [mediaIndex, setMediaIndex] = useState(0);
   const [fullscreenMedia, setFullscreenMedia] = useState(false);
   const [mediaFailed, setMediaFailed] = useState<Record<number, boolean>>({});
+  const [showMenu, setShowMenu] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [editingComment, setEditingComment] = useState<string | null>(null);
 
   const isLocked = post.visibility !== 'PUBLIC' && !isSubscribed;
   const currentMedia = post.media?.[mediaIndex];
@@ -121,6 +124,28 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
     }
   };
 
+  const handleUpdateComment = async (comment: PostComment) => {
+    if (!comment.text.trim()) return;
+    try {
+      await contentService.updateComment(comment.id, comment.text.trim());
+      setEditingComment(null);
+      toast('Comment updated');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to update comment', 'error');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await contentService.deleteComment(commentId);
+      setComments((current) => current.filter((comment) => comment.id !== commentId));
+      setCommentCount((count) => Math.max(0, count - 1));
+      toast('Comment deleted', 'info');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to delete comment', 'error');
+    }
+  };
+
   const handleTip = async () => {
     if (!currentUser) {
       toast('Please sign in to send a tip', 'error');
@@ -150,10 +175,47 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
     setShowShare(false);
   };
 
+  const handleHide = async () => {
+    try {
+      await contentService.hidePost(post.id);
+      setHidden(true);
+      toast('Post hidden', 'info');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not hide post', 'error');
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!model) return;
+    try {
+      await contentService.blockUser(model.id);
+      setHidden(true);
+      toast('Creator blocked', 'info');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not block creator', 'error');
+    }
+  };
+
+  const handleReport = async () => {
+    if (!currentUser) {
+      toast('Please sign in to report posts', 'error');
+      return;
+    }
+    try {
+      await reportService.create({ reporterId: currentUser.id, entityType: 'POST', entityId: post.id, reason: 'OTHER', description: 'Reported from post options' });
+      setShowMenu(false);
+      toast('Post reported', 'info');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not report post', 'error');
+    }
+  };
+
+  if (hidden) return null;
+
   return (
     <div className="bg-white rounded-2xl border border-ink-200/60 shadow-soft overflow-hidden animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between p-4">
+      <div className="relative flex items-center justify-between p-4">
         <Link to={`/model/${post.modelId}`} className="flex items-center gap-3">
           <Avatar src={model?.avatar || ''} size="md" />
           <div>
@@ -167,9 +229,17 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
         <div className="flex items-center gap-2">
           {post.visibility === 'PPV' && <Badge tone="brand"><DollarSign className="w-3 h-3" /> ${post.price}</Badge>}
           {post.visibility !== 'PUBLIC' && post.visibility !== 'PPV' && <Badge tone="info">{post.visibility}</Badge>}
-          <button className="p-1.5 rounded-lg hover:bg-ink-100 transition-colors">
+          <button onClick={() => setShowMenu((open) => !open)} className="p-1.5 rounded-lg hover:bg-ink-100 transition-colors" aria-label="Post options">
             <MoreHorizontal className="w-4 h-4 text-ink-400" />
           </button>
+          {showMenu && (
+            <div className="absolute right-4 top-12 z-20 w-40 rounded-xl border border-ink-200 bg-white py-1 shadow-card">
+              <button onClick={handleHide} className="block w-full px-3 py-2 text-left text-sm text-ink-700 hover:bg-ink-50">Hide post</button>
+              <button onClick={handleReport} className="block w-full px-3 py-2 text-left text-sm text-ink-700 hover:bg-ink-50">Report</button>
+              {model && model.id !== currentUser?.id && <button onClick={handleBlock} className="block w-full px-3 py-2 text-left text-sm text-danger-600 hover:bg-danger-50">Block creator</button>}
+              <button onClick={() => { setShowMenu(false); setShowShare(true); }} className="block w-full px-3 py-2 text-left text-sm text-ink-700 hover:bg-ink-50">Share post</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -194,12 +264,12 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
               </div>
             </div>
           ) : (
-            <div className="relative bg-ink-950">
+            <div className="relative aspect-[4/3] max-h-[600px] min-h-[240px] bg-ink-950 flex items-center justify-center">
               {post.media[mediaIndex].type === 'VIDEO' ? (
-                <video src={post.media[mediaIndex].url} poster={post.media[mediaIndex].thumbnail} controls preload="none" playsInline className="w-full max-h-[600px] object-contain bg-black" />
+                <video src={post.media[mediaIndex].url} poster={post.media[mediaIndex].thumbnail} controls preload="none" playsInline className="h-full w-full object-contain bg-black" />
               ) : (
                 <button type="button" onClick={() => setFullscreenMedia(true)} className="block w-full cursor-zoom-in" aria-label="Open image fullscreen">
-                  <img src={post.media[mediaIndex].url} alt="" loading="lazy" className="w-full max-h-[600px] object-contain" />
+                  <img src={post.media[mediaIndex].url} alt="" loading="lazy" className="h-full w-full object-contain" />
                 </button>
               )}
               {post.media.length > 1 && (
@@ -252,8 +322,11 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
             <div key={c.id} className="flex gap-2">
               <Avatar src={c.userAvatar || ''} size="sm" />
               <div className="flex-1 bg-ink-50 rounded-xl px-3 py-2">
-                <p className="text-xs font-semibold text-ink-700">{c.userId === currentUser?.id ? 'You' : c.userName || 'User'}</p>
-                <p className="text-sm text-ink-800">{c.text}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-ink-700">{c.userId === currentUser?.id ? 'You' : c.userName || 'User'}</p>
+                  {(c.userId === currentUser?.id || model?.id === currentUser?.id) && <div className="flex gap-1"><button type="button" onClick={() => setEditingComment(c.id)} className="p-1 text-ink-400 hover:text-ink-700" aria-label="Edit comment"><Pencil className="h-3 w-3" /></button><button type="button" onClick={() => handleDeleteComment(c.id)} className="p-1 text-ink-400 hover:text-danger-600" aria-label="Delete comment"><Trash2 className="h-3 w-3" /></button></div>}
+                </div>
+                {editingComment === c.id ? <div className="mt-1 flex gap-2"><input value={c.text} onChange={(event) => setComments((current) => current.map((comment) => comment.id === c.id ? { ...comment, text: event.target.value } : comment))} className="min-w-0 flex-1 rounded-lg border border-ink-200 bg-white px-2 py-1 text-sm" /><button type="button" onClick={() => handleUpdateComment(c)} className="text-xs font-semibold text-brand-600">Save</button></div> : <p className="text-sm text-ink-800">{c.text}</p>}
               </div>
             </div>
           ))}

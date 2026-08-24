@@ -18,8 +18,12 @@ export function ModelStories() {
   const [stories, setStories] = useState<Story[]>([]);
   const [text, setText] = useState('');
   const [durationHours, setDurationHours] = useState(6);
+  const [visibility, setVisibility] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [mediaFile, setMediaFile] = useState<File>();
+  const [background, setBackground] = useState('linear-gradient(135deg, #111827, #374151)');
+  const backgrounds = ['linear-gradient(135deg, #111827, #374151)', 'linear-gradient(135deg, #be123c, #f97316)', 'linear-gradient(135deg, #0f766e, #164e63)', 'linear-gradient(135deg, #312e81, #7c3aed)', 'linear-gradient(135deg, #f59e0b, #dc2626)', '#f8fafc'];
 
   useEffect(() => {
     if (!user) return;
@@ -27,12 +31,13 @@ export function ModelStories() {
   }, [user]);
 
   const createStory = async () => {
-    if (!user || !text.trim()) return;
+    if (!user || (!text.trim() && !mediaFile)) return;
     setSaving(true);
     try {
-      const story = await storyService.create(user.id, text.trim(), durationHours);
+      const story = await storyService.create(user.id, text.trim(), durationHours, mediaFile, visibility, background);
       setStories((current) => [story, ...current]);
       setText('');
+      setMediaFile(undefined);
       toast('Story published successfully');
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Could not publish story', 'error');
@@ -57,6 +62,8 @@ export function ModelStories() {
       <Card className="mb-6">
         <CardBody>
           <Textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Share an update..." maxLength={500} rows={4} />
+          <input type="file" accept="image/*,video/*" onChange={(event) => setMediaFile(event.target.files?.[0])} className="mt-3 block w-full text-sm text-ink-500" />
+          {!mediaFile && <div className="mt-3"><p className="mb-2 text-sm font-semibold text-ink-700">Text background</p><div className="flex flex-wrap gap-2">{backgrounds.map((style) => <button key={style} type="button" onClick={() => setBackground(style)} className={`h-9 w-9 rounded-full border-2 ${background === style ? 'border-ink-900' : 'border-white'}`} style={{ background: style }} aria-label="Choose story background" />)}</div></div>}
           <div className="flex items-end justify-between gap-3 mt-3">
             <Field label="Visible for">
               <Select value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} className="w-auto">
@@ -65,7 +72,13 @@ export function ModelStories() {
                 <option value={24}>24 hours</option>
               </Select>
             </Field>
-            <Button onClick={createStory} loading={saving} disabled={!text.trim()}><Plus className="w-4 h-4" /> Publish story</Button>
+            <Field label="Visibility">
+              <Select value={visibility} onChange={(event) => setVisibility(event.target.value as 'PUBLIC' | 'PRIVATE')} className="w-auto">
+                <option value="PUBLIC">Public</option>
+                <option value="PRIVATE">Private</option>
+              </Select>
+            </Field>
+            <Button onClick={createStory} loading={saving} disabled={!text.trim() && !mediaFile}><Plus className="w-4 h-4" /> Publish story</Button>
           </div>
         </CardBody>
       </Card>

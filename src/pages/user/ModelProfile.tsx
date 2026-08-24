@@ -13,7 +13,7 @@ import { LoadingState, EmptyState } from '@/components/ui/States';
 import { PostCard } from '@/components/shared/PostCard';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { modelService, contentService, storyService, subscriptionService, userService, messageService } from '@/services';
+import { modelService, contentService, followService, storyService, subscriptionService, userService, messageService } from '@/services';
 import type { Story, User, Post } from '@/types';
 import { formatTimeAgo, formatDate } from '@/lib/format';
 
@@ -32,6 +32,8 @@ export function ModelProfile() {
   const [subscribing, setSubscribing] = useState(false);
   const [profileStory, setProfileStory] = useState<Story | null>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -40,11 +42,13 @@ export function ModelProfile() {
       contentService.getPostsByModel(id),
       user ? subscriptionService.isSubscribed(user.id, id) : Promise.resolve(false),
       storyService.getByModel(id),
-    ]).then(([m, p, subbed, stories]) => {
+      user ? followService.isFollowing(user.id, id) : Promise.resolve(false),
+    ]).then(([m, p, subbed, stories, isFollowing]) => {
       setModel(m || null);
       setPosts(p);
       setIsSubscribed(subbed);
       setProfileStory(stories[0] || null);
+      setFollowing(isFollowing);
       setLoading(false);
     });
   }, [id, user]);
@@ -70,7 +74,25 @@ export function ModelProfile() {
     }
   };
 
+  const handleFollow = async () => {
+    if (!user || !model || followBusy) return;
+    setFollowBusy(true);
+    try {
+      setFollowing(await followService.toggle(model.id));
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Could not update follow', 'error');
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
   const Shell = RoleShell;
+  const replyToStory = async (text: string) => {
+    if (!user || !profileStory || !model) return;
+    const conversation = await messageService.getOrCreateConversation(user.id, model.id);
+    await messageService.sendMessage(conversation.id, user.id, { type: 'TEXT', text: `[Story ${profileStory.id}] ${text}`, storyId: profileStory.id });
+    toast('Story reply sent', 'success');
+  };
 
   if (loading) return <Shell><LoadingState /></Shell>;
   if (!model) return <Shell><EmptyState title="Creator not found" /></Shell>;
@@ -110,6 +132,7 @@ export function ModelProfile() {
           {user && user.id !== model.id && (
             <Button variant="outline" size="md" onClick={handleMessage}><MessageCircle className="w-4 h-4" /></Button>
           )}
+          {user && user.id !== model.id && <Button variant="outline" size="md" onClick={handleFollow} loading={followBusy}>{following ? 'Following' : 'Follow'}</Button>}
           {isSubscribed ? (
             <Button variant="outline" size="md">Subscribed</Button>
           ) : (
@@ -232,7 +255,7 @@ export function ModelProfile() {
           <p className="text-xs text-center text-ink-400">By subscribing, you agree to the terms. Cancel anytime.</p>
         </div>
       </Modal>
-      <StoryViewer story={selectedStory} model={model} onClose={() => setSelectedStory(null)} />
+      <StoryViewer story={selectedStory} model={model} onClose={() => setSelectedStory(null)} onReply={replyToStory} />
     </Shell>
   );
 }

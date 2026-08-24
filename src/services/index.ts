@@ -499,16 +499,20 @@ export const contentService = {
     return withUserInteractions(await withMediaUrls((data || []).map(mapPost)));
   },
 
-  async getFeedPosts(userId: string): Promise<Post[]> {
-    const { data: subs } = await supabase
-      .from('subscriptions')
-      .select('model_id')
-      .eq('user_id', userId)
-      .eq('status', 'ACTIVE');
+  async getFeedPosts(userId: string, page = 0, pageSize = 8): Promise<Post[]> {
+    const [{ data: subs }, { data: hidden }, { data: blocked }] = await Promise.all([
+      supabase.from('subscriptions').select('model_id').eq('user_id', userId).eq('status', 'ACTIVE'),
+      supabase.from('hidden_posts').select('post_id').eq('user_id', userId),
+      supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userId),
+    ]);
 
     const modelIds = (subs || []).map((s) => s.model_id);
+    const hiddenPostIds = (hidden || []).map((item) => item.post_id);
+    const blockedModelIds = (blocked || []).map((item) => item.blocked_id);
 
     let query = supabase.from('posts').select('*, post_media(*)').eq('status', 'PUBLISHED');
+    if (hiddenPostIds.length > 0) query = query.not('id', 'in', `(${hiddenPostIds.join(',')})`);
+    if (blockedModelIds.length > 0) query = query.not('model_id', 'in', `(${blockedModelIds.join(',')})`);
 
     if (modelIds.length > 0) {
       query = query.or(`model_id.in.(${modelIds.join(',')}),visibility.eq.PUBLIC`);
@@ -516,10 +520,19 @@ export const contentService = {
       query = query.eq('visibility', 'PUBLIC');
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('created_at', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
 
     if (error) throw new Error(error.message);
-    return withUserInteractions(await withMediaUrls((data || []).map(mapPost)));
+    const posts = (data || []).map(mapPost);
+    const now = Date.now();
+    posts.sort((left, right) => {
+      const leftAge = Math.max(0, now - new Date(left.createdAt).getTime());
+      const rightAge = Math.max(0, now - new Date(right.createdAt).getTime());
+      const leftWeight = Math.random() * (1 + 1 / (1 + leftAge / 86400000));
+      const rightWeight = Math.random() * (1 + 1 / (1 + rightAge / 86400000));
+      return rightWeight - leftWeight;
+    });
+    return withUserInteractions(await withMediaUrls(posts));
   },
 
   async getById(id: string): Promise<Post | undefined> {
@@ -753,6 +766,33 @@ export const contentService = {
       userName: row.profiles?.name,
       userAvatar: row.profiles?.avatar_url,
     };
+  },
+
+  async updateComment(commentId: string, text: string): Promise<void> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('Not authenticated');
+    const { error } = await supabase.from('comments').update({ text }).eq('id', commentId).eq('user_id', user.user.id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteComment(commentId: string): Promise<void> {
+    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+    if (error) throw new Error(error.message);
+  },
+
+  async hidePost(postId: string): Promise<void> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('Not authenticated');
+    const { error } = await supabase.from('hidden_posts').upsert({ post_id: postId, user_id: user.user.id });
+    if (error) throw new Error(error.message);
+  },
+
+  async blockUser(blockedUserId: string): Promise<void> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('Not authenticated');
+    if (user.user.id === blockedUserId) throw new Error('You cannot block yourself');
+    const { error } = await supabase.from('blocked_users').upsert({ blocker_id: user.user.id, blocked_id: blockedUserId });
+    if (error) throw new Error(error.message);
   },
 
   async sendTip(postId: string, modelId: string, amount: number): Promise<void> {
@@ -1035,6 +1075,7 @@ export const messageService = {
       unlocked: row.unlocked,
       read: row.read,
       createdAt: row.created_at,
+      storyId: row.story_id || undefined,
     }));
   },
 
@@ -1059,6 +1100,7 @@ export const messageService = {
             unlocked: row.unlocked,
             read: row.read,
             createdAt: row.created_at,
+            storyId: row.story_id || undefined,
           });
         }
       )
@@ -1069,7 +1111,7 @@ export const messageService = {
     };
   },
 
-  async sendMessage(conversationId: string, senderId: string, data: { type: Message['type']; text?: string; mediaUrl?: string; price?: number }): Promise<Message> {
+  async sendMessage(conversationId: string, senderId: string, data: { type: Message['type']; text?: string; mediaUrl?: string; price?: number; storyId?: string }): Promise<Message> {
     const { data: message, error } = await supabase
       .from('messages')
       .insert({
@@ -1080,6 +1122,7 @@ export const messageService = {
         media_url: data.mediaUrl,
         price: data.price,
         unlocked: data.type !== 'PPV',
+        story_id: data.storyId,
       })
       .select()
       .single();
@@ -1106,6 +1149,7 @@ export const messageService = {
       type: message.type,
       read: message.read,
       createdAt: message.created_at,
+      storyId: message.story_id || undefined,
     };
   },
 
@@ -1549,30 +1593,75 @@ export const storyService = {
     const createdAt = story.created_at;
     const expiresAt = story.expires_at;
     const durationHours = story.duration_hours || Math.max(1, (new Date(expiresAt).getTime() - new Date(createdAt).getTime()) / 3600000);
-    return { id: story.id, modelId: story.model_id, text: story.text, createdAt, expiresAt, durationHours };
+    return { id: story.id, modelId: story.model_id, text: story.text, createdAt, expiresAt, durationHours, mediaType: story.media_type || undefined, mediaUrl: story.media_url || undefined, storagePath: story.storage_path || undefined, visibility: story.visibility || 'PUBLIC', background: story.background || undefined };
   },
 
   async getByModel(modelId: string): Promise<Story[]> {
     const { data, error } = await supabase.from('stories').select('*').eq('model_id', modelId).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
-    return (data || []).map(this.mapStory);
+    return this.withMediaUrls((data || []).map(this.mapStory));
   },
 
   async getActive(): Promise<Story[]> {
     const { data, error } = await supabase.from('stories').select('*').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
-    return (data || []).map(this.mapStory);
+    return this.withMediaUrls((data || []).map(this.mapStory));
   },
 
-  async create(modelId: string, text: string, durationHours = 6): Promise<Story> {
+  async withMediaUrls(stories: Story[]): Promise<Story[]> {
+    return Promise.all(stories.map(async (story) => {
+      if (!story.storagePath) return story;
+      const { data, error } = await supabase.storage.from('post-media').createSignedUrl(story.storagePath, 3600);
+      if (error) throw new Error(error.message);
+      return { ...story, mediaUrl: data.signedUrl };
+    }));
+  },
+
+  async create(modelId: string, text: string, durationHours = 6, mediaFile?: File, visibility: 'PUBLIC' | 'PRIVATE' = 'PUBLIC', background = 'linear-gradient(135deg, #111827, #374151)'): Promise<Story> {
     const safeDuration = Math.min(24, Math.max(1, durationHours));
-    const { data, error } = await supabase.from('stories').insert({ model_id: modelId, text, duration_hours: safeDuration }).select().single();
-    if (error) throw new Error(error.message);
-    return this.mapStory(data);
+    let mediaType: 'IMAGE' | 'VIDEO' | undefined;
+    let storagePath: string | undefined;
+    if (mediaFile) {
+      const uploaded = await contentService.uploadMedia(mediaFile, modelId, `story-${crypto.randomUUID()}`);
+      mediaType = uploaded.type;
+      storagePath = uploaded.storagePath;
+    }
+    const { data, error } = await supabase.from('stories').insert({ model_id: modelId, text, duration_hours: safeDuration, media_type: mediaType, storage_path: storagePath, visibility, background }).select().single();
+    if (error) {
+      if (storagePath) await supabase.storage.from('post-media').remove([storagePath]);
+      throw new Error(error.message);
+    }
+    const [story] = await this.withMediaUrls([this.mapStory(data)]);
+    return story;
   },
 
   async remove(id: string): Promise<void> {
     const { error } = await supabase.from('stories').delete().eq('id', id);
     if (error) throw new Error(error.message);
+  },
+};
+
+export const followService = {
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    if (followerId === followingId) return false;
+    const { data, error } = await supabase.from('follows').select('follower_id').eq('follower_id', followerId).eq('following_id', followingId).maybeSingle();
+    if (error) throw new Error(error.message);
+    return Boolean(data);
+  },
+
+  async toggle(followingId: string): Promise<boolean> {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser.user) throw new Error('Not authenticated');
+    if (authUser.user.id === followingId) throw new Error('You cannot follow yourself');
+    const existing = await supabase.from('follows').select('follower_id').eq('follower_id', authUser.user.id).eq('following_id', followingId).maybeSingle();
+    if (existing.error) throw new Error(existing.error.message);
+    if (existing.data) {
+      const { error } = await supabase.from('follows').delete().eq('follower_id', authUser.user.id).eq('following_id', followingId);
+      if (error) throw new Error(error.message);
+      return false;
+    }
+    const { error } = await supabase.from('follows').insert({ follower_id: authUser.user.id, following_id: followingId });
+    if (error) throw new Error(error.message);
+    return true;
   },
 };

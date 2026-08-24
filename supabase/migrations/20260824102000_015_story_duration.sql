@@ -2,6 +2,9 @@ ALTER TABLE public.stories
   ADD COLUMN IF NOT EXISTS duration_hours integer NOT NULL DEFAULT 6
   CHECK (duration_hours BETWEEN 1 AND 24);
 
+ALTER TABLE public.stories ADD COLUMN IF NOT EXISTS media_type text CHECK (media_type IN ('IMAGE', 'VIDEO'));
+ALTER TABLE public.stories ADD COLUMN IF NOT EXISTS storage_path text;
+
 ALTER TABLE public.stories
   ALTER COLUMN expires_at SET DEFAULT (now() + interval '6 hours');
 

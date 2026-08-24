@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { RoleShell } from '@/components/layout/RoleShell';
 import { PostCard } from '@/components/shared/PostCard';
 import { ModelCard } from '@/components/shared/ModelCard';
 import { StoryViewer } from '@/components/shared/StoryViewer';
 import { LoadingState, EmptyState } from '@/components/ui/States';
 import { useAuth } from '@/context/AuthContext';
-import { contentService, modelService, storyService, subscriptionService } from '@/services';
+import { contentService, messageService, modelService, storyService, subscriptionService } from '@/services';
+import { useToast } from '@/context/ToastContext';
 import type { Post, Story, User as UserType } from '@/types';
 
 export function UserHome() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [models, setModels] = useState<Record<string, UserType>>({});
   const [subscriptions, setSubscriptions] = useState<Set<string>>(new Set());
@@ -17,11 +19,29 @@ export function UserHome() {
   const [suggested, setSuggested] = useState<UserType[]>([]);
   const [activeStories, setActiveStories] = useState<Story[]>([]);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [feedPage, setFeedPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const feedEndRef = useRef<HTMLDivElement>(null);
+
+  const loadMorePosts = useCallback(async () => {
+    if (!user || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = feedPage + 1;
+      const nextPosts = await contentService.getFeedPosts(user.id, nextPage);
+      setPosts((current) => [...current, ...nextPosts]);
+      setFeedPage(nextPage);
+      setHasMore(nextPosts.length === 8);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [feedPage, hasMore, loadingMore, user]);
 
   useEffect(() => {
     if (!user) return;
     Promise.all([
-      contentService.getFeedPosts(user.id),
+      contentService.getFeedPosts(user.id, 0),
       subscriptionService.getByUser(user.id),
       modelService.getAll(),
       storyService.getActive(),
@@ -33,9 +53,21 @@ export function UserHome() {
       setSubscriptions(new Set(subs.filter((s) => s.status === 'ACTIVE').map((s) => s.modelId)));
       setSuggested(allModels.filter((m) => !subs.some((s) => s.modelId === m.id)).slice(0, 3));
       setActiveStories(stories);
+      setFeedPage(0);
+      setHasMore(feed.length === 8);
       setLoading(false);
     });
   }, [user]);
+
+  useEffect(() => {
+    const target = feedEndRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) void loadMorePosts();
+    }, { rootMargin: '480px' });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMorePosts]);
 
   if (loading) return <RoleShell><LoadingState /></RoleShell>;
 
@@ -48,6 +80,12 @@ export function UserHome() {
     model: models[story.modelId],
   })).filter((item): item is { story: Story; model: UserType } => Boolean(item.model));
   const selectedModel = selectedStory ? models[selectedStory.modelId] : undefined;
+  const replyToStory = async (text: string) => {
+    if (!user || !selectedStory || !selectedModel) return;
+    const conversation = await messageService.getOrCreateConversation(user.id, selectedModel.id);
+    await messageService.sendMessage(conversation.id, user.id, { type: 'TEXT', text: `[Story ${selectedStory.id}] ${text}`, storyId: selectedStory.id });
+    toast('Story reply sent', 'success');
+  };
 
   return (
     <RoleShell>
@@ -84,6 +122,8 @@ export function UserHome() {
               />
             ))
           )}
+          <div ref={feedEndRef} className="h-8" aria-hidden="true" />
+          {loadingMore && <p className="py-4 text-center text-sm text-ink-500">Loading more posts...</p>}
         </div>
 
         {/* Sidebar */}
@@ -98,7 +138,7 @@ export function UserHome() {
           </div>
         </div>
       </div>
-      <StoryViewer story={selectedStory} model={selectedModel} onClose={() => setSelectedStory(null)} />
+      <StoryViewer story={selectedStory} model={selectedModel} onClose={() => setSelectedStory(null)} onReply={replyToStory} />
     </RoleShell>
   );
 }

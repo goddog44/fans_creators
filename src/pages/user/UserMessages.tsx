@@ -202,6 +202,7 @@ export function UserMessages() {
                           </div>
                         ) : (
                           <div className={`rounded-2xl px-4 py-2.5 ${isMe ? 'bg-brand-600 text-white' : 'bg-white border border-ink-200 text-ink-800'}`}>
+                            {msg.storyId && <p className="mb-1 text-xs font-semibold opacity-70">Reply to Story</p>}
                             <p className="text-sm">{msg.text}</p>
                           </div>
                         )}
