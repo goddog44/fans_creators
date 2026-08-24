@@ -49,7 +49,7 @@ export function ExplorePage() {
 
           {user ? (
             <Link
-              to={user.role === 'USER' ? '/feed' : '/dashboard'}
+              to={user.role === 'USER' ? '/home' : user.role === 'MODEL' ? '/model' : user.role === 'MANAGER' ? '/manager' : '/admin'}
               className="flex items-center gap-2"
             >
               <Avatar src={user.avatar} size="sm" />

@@ -163,7 +163,6 @@ export interface Message {
   createdAt: string;
   storyId?: string;
   reelId?: string;
-  reelId?: string;
   editedAt?: string;
   deletedAt?: string;
 }
@@ -210,7 +209,7 @@ export interface Notification {
 export interface Report {
   id: string;
   reporterId: string;
-  entityType: 'MODEL' | 'POST' | 'MESSAGE' | 'USER';
+  entityType: 'MODEL' | 'POST' | 'REEL' | 'MESSAGE' | 'USER';
   entityId: string;
   reason: ReportReason;
   description: string;

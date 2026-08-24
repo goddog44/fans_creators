@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { postPath, profilePath } from '@/lib/contentRoutes';
 import { Heart, MessageCircle, Bookmark, Share2, DollarSign, Lock, MoreHorizontal, BadgeCheck, ChevronLeft, ChevronRight, Maximize2, Pencil, Trash2 } from 'lucide-react';
 import type { Post, User, Comment as PostComment } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
@@ -165,7 +166,7 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/post/${post.id}`;
+    const url = `${window.location.origin}${postPath(post.id)}`;
     try {
       await navigator.clipboard.writeText(url);
       toast('Link copied to clipboard', 'info');
@@ -216,7 +217,7 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
     <div className="bg-white rounded-2xl border border-ink-200/60 shadow-soft overflow-hidden animate-fade-in">
       {/* Header */}
       <div className="relative flex items-center justify-between p-4">
-        <Link to={`/model/${post.modelId}`} className="flex items-center gap-3">
+        <Link to={profilePath(post.modelId)} className="flex items-center gap-3">
           <Avatar src={model?.avatar || ''} size="md" />
           <div>
             <div className="flex items-center gap-1">
@@ -381,7 +382,7 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
       <Modal open={showShare} onClose={() => setShowShare(false)} title="Share" size="sm">
         <div className="space-y-3">
           <div className="flex items-center gap-2 p-3 bg-ink-50 rounded-xl">
-            <input readOnly value={`${window.location.origin}/post/${post.id}`} className="flex-1 bg-transparent text-sm outline-none text-ink-600" />
+            <input readOnly value={`${window.location.origin}${postPath(post.id)}`} className="flex-1 bg-transparent text-sm outline-none text-ink-600" />
             <Button size="sm" onClick={handleShare}>Copy</Button>
           </div>
         </div>

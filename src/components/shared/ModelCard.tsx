@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { profilePath } from '@/lib/contentRoutes';
 import { Users, BadgeCheck, Star } from 'lucide-react';
 import type { User } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
@@ -17,7 +18,7 @@ export function ModelCard({ model, onSubscribe, isSubscribed, hasActiveStory, on
   return (
     <div className="bg-white rounded-2xl border border-ink-200/60 shadow-soft overflow-hidden group hover:shadow-card transition-all duration-300">
       {/* Cover */}
-      <Link to={`/model/${model.id}`} className="block relative h-28 overflow-hidden">
+      <Link to={profilePath(model.id)} className="block relative h-28 overflow-hidden">
         <img src={model.cover || `https://picsum.photos/seed/${model.id}/600/200`} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
       </Link>
@@ -29,12 +30,12 @@ export function ModelCard({ model, onSubscribe, isSubscribed, hasActiveStory, on
             <Avatar src={model.avatar} emoji={model.avatarEmoji} size="xl" className="border-4 border-white rounded-full" />
           </button>
         ) : (
-          <Link to={`/model/${model.id}`}>
+          <Link to={profilePath(model.id)}>
             <Avatar src={model.avatar} size="xl" ring className="border-4 border-white rounded-full" />
           </Link>
         )}
         <div className="mt-3">
-          <Link to={`/model/${model.id}`}>
+          <Link to={profilePath(model.id)}>
             <div className="flex items-center gap-1">
               <h3 className="font-display font-bold text-ink-900">{model.name}</h3>
               {model.verified && <BadgeCheck className="w-4 h-4 text-brand-500" />}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { contentService, followService, messageService, reelService, reportService } from '@/services';
 import { Link, useNavigate } from 'react-router-dom';
+import { profilePath, reelPath } from '@/lib/contentRoutes';
 
 export function ReelCard({ reel, creator, currentUser }: { reel: Reel; creator?: User; currentUser?: User | null }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -32,7 +33,7 @@ export function ReelCard({ reel, creator, currentUser }: { reel: Reel; creator?:
   }, [reel.id, viewed]);
 
   const share = async () => {
-    const url = `${window.location.origin}/reels/${reel.id}`;
+    const url = `${window.location.origin}${reelPath(reel.id)}`;
     if (navigator.share) await navigator.share({ title: creator?.name, text: reel.caption, url }).catch(() => {});
     else await navigator.clipboard.writeText(url);
     toast('Reel link copied', 'info');
@@ -64,7 +65,7 @@ export function ReelCard({ reel, creator, currentUser }: { reel: Reel; creator?:
   return <article className="relative mx-auto h-[min(78vh,760px)] w-full max-w-[430px] snap-start overflow-hidden rounded-3xl bg-black shadow-card">
     <video ref={videoRef} src={reel.mediaUrl} muted={muted} loop playsInline preload="metadata" className="h-full w-full object-cover" onClick={() => setMuted((value) => !value)} />
     <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-5 pt-28 text-white">
-      <div className="pointer-events-auto flex items-center gap-3"><Link to={`/model/${creator?.id}`}><Avatar src={creator?.avatar || ''} size="md" /></Link><Link to={`/model/${creator?.id}`} className="font-semibold">{creator?.name}</Link><Button size="sm" variant="outline" onClick={toggleFollow} className="border-white/50 bg-white/10 text-white">{following ? 'Following' : 'Follow'}</Button></div>
+      <div className="pointer-events-auto flex items-center gap-3"><Link to={creator ? profilePath(creator.id) : '#'}><Avatar src={creator?.avatar || ''} size="md" /></Link><Link to={creator ? profilePath(creator.id) : '#'} className="font-semibold">{creator?.name}</Link><Button size="sm" variant="outline" onClick={toggleFollow} className="border-white/50 bg-white/10 text-white">{following ? 'Following' : 'Follow'}</Button></div>
       <p className="mt-3 text-sm">{reel.caption}</p><p className="mt-1 text-xs text-white/75">{reel.hashtags.join(' ')}</p>
     </div>
     <div className="absolute bottom-6 right-3 flex flex-col items-center gap-3 text-white"><button onClick={toggleLike} aria-label="Like Reel"><Heart className={`h-6 w-6 ${liked ? 'fill-brand-500 text-brand-500' : ''}`} /></button><button onClick={toggleSave} aria-label="Save Reel"><Bookmark className={`h-6 w-6 ${saved ? 'fill-white' : ''}`} /></button><button onClick={share} aria-label="Share Reel"><Share2 className="h-6 w-6" /></button><button onClick={sendToCreator} aria-label="Send Reel in private message"><Send className="h-6 w-6" /></button><button onClick={() => setMuted((value) => !value)} aria-label="Toggle sound">{muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}</button><button onClick={() => videoRef.current?.requestFullscreen()} aria-label="Fullscreen"><Maximize2 className="h-6 w-6" /></button><button onClick={() => setMenuOpen((value) => !value)} aria-label="Reel options"><MoreHorizontal className="h-6 w-6" /></button></div>

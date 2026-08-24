@@ -1644,6 +1644,14 @@ export const storyService = {
     return this.withMediaUrls((data || []).map(this.mapStory));
   },
 
+  async getById(id: string): Promise<Story | undefined> {
+    const { data, error } = await supabase.from('stories').select('*').eq('id', id).gt('expires_at', new Date().toISOString()).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return undefined;
+    const [story] = await this.withMediaUrls([this.mapStory(data)]);
+    return story;
+  },
+
   async getActive(): Promise<Story[]> {
     const { data, error } = await supabase.from('stories').select('*').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
     if (error) throw new Error(error.message);

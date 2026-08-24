@@ -58,6 +58,7 @@ export async function resolveMediaUrls(
  * avec leurs URLs signées url / thumbnail, prêt à consommer par PostCard.
  */
 export async function hydratePostMedia
+<
   T extends { storagePath: string; thumbnailPath?: string }
 >(rawMedia: T[]): Promise<(T & { url: string | null; thumbnail: string | null })[]> {
   const allPaths = rawMedia.flatMap((m) => [m.storagePath, m.thumbnailPath].filter(Boolean) as string[]);

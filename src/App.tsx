@@ -23,6 +23,7 @@ import { UserPayments } from '@/pages/user/UserPayments';
 import { UserProfile } from '@/pages/user/UserProfile';
 import { ReelsPage } from '@/pages/user/ReelsPage';
 import { PostPage } from '@/pages/user/PostPage';
+import { StoryPage } from '@/pages/user/StoryPage';
 
 // Model
 import { ModelDashboard } from '@/pages/model/ModelDashboard';
@@ -78,7 +79,9 @@ function AppRoutes() {
       <Route path="/landing/home" element={<ProtectedRoute roles={allRoles}><UserHome /></ProtectedRoute>} />
       <Route path="/explore" element={<ProtectedRoute roles={allRoles}><UserExplore /></ProtectedRoute>} />
       <Route path="/reels" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
+      <Route path="/reel/:id" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
       <Route path="/reels/:id" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
+      <Route path="/story/:id" element={<ProtectedRoute roles={allRoles}><StoryPage /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -87,6 +90,7 @@ function AppRoutes() {
       {/* User */}
       <Route path="/home" element={<ProtectedRoute roles={allRoles}><UserHome /></ProtectedRoute>} />
       <Route path="/user/explore" element={<ProtectedRoute roles={allRoles}><UserExplore /></ProtectedRoute>} />
+      <Route path="/profile/:id" element={<ProtectedRoute roles={allRoles}><ModelProfile /></ProtectedRoute>} />
       <Route path="/model/:id" element={<ProtectedRoute roles={allRoles}><ModelProfile /></ProtectedRoute>} />
       <Route path="/post/:id" element={<ProtectedRoute roles={allRoles}><PostPage /></ProtectedRoute>} />
       <Route path="/subscriptions" element={<ProtectedRoute roles={allRoles}><UserSubscriptions /></ProtectedRoute>} />
