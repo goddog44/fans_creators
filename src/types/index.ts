@@ -100,6 +100,7 @@ export interface Reel {
   storagePath: string;
   createdAt: string;
   views: number;
+  commentsCount: number;
   likedByUser?: boolean;
   bookmarkedByUser?: boolean;
 }
@@ -136,6 +137,13 @@ export interface Comment {
   createdAt: string;
   userName?: string;
   userAvatar?: string;
+}
+
+export interface ReelComment extends Comment {
+  reelId: string;
+  parentId?: string;
+  likes: number;
+  likedByUser?: boolean;
 }
 
 export interface Subscription {

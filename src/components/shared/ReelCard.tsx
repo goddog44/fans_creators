@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bookmark, Heart, Maximize2, MoreHorizontal, Send, Share2, Volume2, VolumeX } from 'lucide-react';
+import { Bookmark, Heart, Maximize2, MessageCircle, MoreHorizontal, Send, Share2, Volume2, VolumeX } from 'lucide-react';
 import type { Reel, User } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +7,7 @@ import { useToast } from '@/context/ToastContext';
 import { contentService, followService, messageService, reelService, reportService } from '@/services';
 import { Link, useNavigate } from 'react-router-dom';
 import { profilePath, reelPath } from '@/lib/contentRoutes';
+import { ReelComments } from '@/components/shared/ReelComments';
 
 export function ReelCard({ reel, creator, currentUser }: { reel: Reel; creator?: User; currentUser?: User | null }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -16,6 +17,8 @@ export function ReelCard({ reel, creator, currentUser }: { reel: Reel; creator?:
   const [following, setFollowing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [viewed, setViewed] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(reel.commentsCount);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -68,7 +71,8 @@ export function ReelCard({ reel, creator, currentUser }: { reel: Reel; creator?:
       <div className="pointer-events-auto flex items-center gap-3"><Link to={creator ? profilePath(creator.id) : '#'}><Avatar src={creator?.avatar || ''} size="md" /></Link><Link to={creator ? profilePath(creator.id) : '#'} className="font-semibold">{creator?.name}</Link><Button size="sm" variant="outline" onClick={toggleFollow} className="border-white/50 bg-white/10 text-white">{following ? 'Following' : 'Follow'}</Button></div>
       <p className="mt-3 text-sm">{reel.caption}</p><p className="mt-1 text-xs text-white/75">{reel.hashtags.join(' ')}</p>
     </div>
-    <div className="absolute bottom-6 right-3 flex flex-col items-center gap-3 text-white"><button onClick={toggleLike} aria-label="Like Reel"><Heart className={`h-6 w-6 ${liked ? 'fill-brand-500 text-brand-500' : ''}`} /></button><button onClick={toggleSave} aria-label="Save Reel"><Bookmark className={`h-6 w-6 ${saved ? 'fill-white' : ''}`} /></button><button onClick={share} aria-label="Share Reel"><Share2 className="h-6 w-6" /></button><button onClick={sendToCreator} aria-label="Send Reel in private message"><Send className="h-6 w-6" /></button><button onClick={() => setMuted((value) => !value)} aria-label="Toggle sound">{muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}</button><button onClick={() => videoRef.current?.requestFullscreen()} aria-label="Fullscreen"><Maximize2 className="h-6 w-6" /></button><button onClick={() => setMenuOpen((value) => !value)} aria-label="Reel options"><MoreHorizontal className="h-6 w-6" /></button></div>
+    <div className="absolute bottom-6 right-3 flex flex-col items-center gap-3 text-white"><button onClick={toggleLike} aria-label="Like Reel"><Heart className={`h-6 w-6 ${liked ? 'fill-brand-500 text-brand-500' : ''}`} /></button><button onClick={toggleSave} aria-label="Save Reel"><Bookmark className={`h-6 w-6 ${saved ? 'fill-white' : ''}`} /></button><button onClick={() => setCommentsOpen(true)} aria-label="Open Reel comments"><MessageCircle className="h-6 w-6" /><span className="text-[10px]">{commentCount}</span></button><button onClick={share} aria-label="Share Reel"><Share2 className="h-6 w-6" /></button><button onClick={sendToCreator} aria-label="Send Reel in private message"><Send className="h-6 w-6" /></button><button onClick={() => setMuted((value) => !value)} aria-label="Toggle sound">{muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}</button><button onClick={() => videoRef.current?.requestFullscreen()} aria-label="Fullscreen"><Maximize2 className="h-6 w-6" /></button><button onClick={() => setMenuOpen((value) => !value)} aria-label="Reel options"><MoreHorizontal className="h-6 w-6" /></button></div>
+    {commentsOpen && <ReelComments reelId={reel.id} currentUser={currentUser} ownerId={creator?.id} onClose={() => setCommentsOpen(false)} onCountChange={setCommentCount} />}
     {menuOpen && <div className="absolute right-12 bottom-5 z-10 w-36 rounded-xl bg-white py-1 text-sm text-ink-800 shadow-card"><button onClick={() => { setMenuOpen(false); void share(); }} className="block w-full px-3 py-2 text-left hover:bg-ink-50">Copy link</button><button onClick={() => void report()} className="block w-full px-3 py-2 text-left hover:bg-ink-50">Report</button>{creator && creator.id !== currentUser?.id && <button onClick={() => void blockCreator()} className="block w-full px-3 py-2 text-left text-danger-600 hover:bg-danger-50">Block creator</button>}</div>}
   </article>;
 }

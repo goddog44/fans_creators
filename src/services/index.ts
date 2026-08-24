@@ -16,6 +16,7 @@ import type {
   Visibility,
   Story,
   Reel,
+  ReelComment,
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -1729,7 +1730,7 @@ export const followService = {
 
 export const reelService = {
   mapReel(row: any, mediaUrl: string): Reel {
-    return { id: row.id, modelId: row.model_id, caption: row.caption || '', hashtags: row.hashtags || [], visibility: row.visibility, mediaUrl, storagePath: row.storage_path, createdAt: row.created_at, views: row.views_count || 0 };
+    return { id: row.id, modelId: row.model_id, caption: row.caption || '', hashtags: row.hashtags || [], visibility: row.visibility, mediaUrl, storagePath: row.storage_path, createdAt: row.created_at, views: row.views_count || 0, commentsCount: row.comments_count || 0 };
   },
 
   async getAll(): Promise<Reel[]> {
@@ -1780,5 +1781,61 @@ export const reelService = {
   async countView(reelId: string): Promise<void> {
     const { error } = await supabase.rpc('increment_reel_views', { target_reel_id: reelId });
     if (error) throw new Error(error.message);
+  },
+
+  async getComments(reelId: string): Promise<ReelComment[]> {
+    const { data, error } = await supabase
+      .from('reel_comments')
+      .select('id, reel_id, parent_id, user_id, text, created_at, likes_count, profiles:user_id (name, avatar_url)')
+      .eq('reel_id', reelId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const { data: authUser } = await supabase.auth.getUser();
+    const userId = authUser.user?.id;
+    const commentIds = (data || []).map((row) => row.id);
+    const likedIds = new Set<string>();
+    if (userId && commentIds.length > 0) {
+      const { data: likes, error: likesError } = await supabase.from('reel_comment_likes').select('comment_id').eq('user_id', userId).in('comment_id', commentIds);
+      if (likesError) throw new Error(likesError.message);
+      (likes || []).forEach((like) => likedIds.add(like.comment_id));
+    }
+    return (data || []).map((row: any) => ({ id: row.id, reelId: row.reel_id, parentId: row.parent_id || undefined, userId: row.user_id, text: row.text, createdAt: row.created_at, userName: row.profiles?.name, userAvatar: row.profiles?.avatar_url, likes: row.likes_count || 0, likedByUser: likedIds.has(row.id) }));
+  },
+
+  async addComment(reelId: string, text: string, parentId?: string): Promise<ReelComment> {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser.user) throw new Error('Not authenticated');
+    const { data, error } = await supabase.from('reel_comments').insert({ reel_id: reelId, user_id: authUser.user.id, text, parent_id: parentId || null }).select('id, reel_id, parent_id, user_id, text, created_at, likes_count, profiles:user_id (name, avatar_url)').single();
+    if (error) throw new Error(error.message);
+    const row: any = data;
+    return { id: row.id, reelId: row.reel_id, parentId: row.parent_id || undefined, userId: row.user_id, text: row.text, createdAt: row.created_at, userName: row.profiles?.name, userAvatar: row.profiles?.avatar_url, likes: row.likes_count || 0, likedByUser: false };
+  },
+
+  async updateComment(commentId: string, text: string): Promise<void> {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser.user) throw new Error('Not authenticated');
+    const { error } = await supabase.from('reel_comments').update({ text }).eq('id', commentId).eq('user_id', authUser.user.id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteComment(commentId: string): Promise<void> {
+    const { error } = await supabase.from('reel_comments').delete().eq('id', commentId);
+    if (error) throw new Error(error.message);
+  },
+
+  async toggleCommentLike(commentId: string): Promise<boolean> {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser.user) throw new Error('Not authenticated');
+    const existing = await supabase.from('reel_comment_likes').select('comment_id').eq('comment_id', commentId).eq('user_id', authUser.user.id).maybeSingle();
+    if (existing.error) throw new Error(existing.error.message);
+    if (existing.data) {
+      const { error } = await supabase.from('reel_comment_likes').delete().eq('comment_id', commentId).eq('user_id', authUser.user.id);
+      if (error) throw new Error(error.message);
+      return false;
+    }
+    const { error } = await supabase.from('reel_comment_likes').insert({ comment_id: commentId, user_id: authUser.user.id });
+    if (error) throw new Error(error.message);
+    return true;
   },
 };
