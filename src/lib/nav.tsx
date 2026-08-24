@@ -34,6 +34,7 @@ export const managerNavItems: NavItem[] = [
   { to: '/manager/revenue', label: 'Revenue', icon: <DollarSign className="w-5 h-5" /> },
   { to: '/manager/analytics', label: 'Analytics', icon: <BarChart3 className="w-5 h-5" /> },
   { to: '/manager/notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
+  { to: '/manager/profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   { to: '/manager/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
 ];
 
@@ -49,6 +50,7 @@ export const adminNavItems: NavItem[] = [
   { to: '/admin/reports', label: 'Reports', icon: <ShieldCheck className="w-5 h-5" /> },
   { to: '/admin/moderation', label: 'Moderation', icon: <ShieldCheck className="w-5 h-5" /> },
   { to: '/admin/notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
+  { to: '/admin/profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   { to: '/admin/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   { to: '/admin/audit-logs', label: 'Audit Logs', icon: <FileText className="w-5 h-5" /> },
 ];

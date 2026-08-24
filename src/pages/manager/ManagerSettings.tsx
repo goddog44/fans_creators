@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Key, Mail, Bell, Shield } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { PageHeader } from '@/components/shared/StatCard';
@@ -14,6 +15,7 @@ import { managerNavItems } from '@/lib/nav';
 export function ManagerSettings() {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   const [name, setName] = useState(user?.name || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [saving, setSaving] = useState(false);
@@ -28,7 +30,7 @@ export function ManagerSettings() {
 
   return (
     <DashboardShell navItems={managerNavItems} brandColor="accent">
-      <PageHeader title="Settings" subtitle="Manage your account" />
+      <PageHeader title={location.pathname.endsWith('/profile') ? 'Profile' : 'Settings'} subtitle={location.pathname.endsWith('/profile') ? 'Manage your public profile' : 'Manage your account'} />
 
       <div className="max-w-2xl space-y-6">
         {user && <Card className="p-6"><h3 className="font-display font-bold text-lg text-ink-900 mb-4">Profile media</h3><ProfileMediaEditor user={user} onUpdated={updateUser} /></Card>}

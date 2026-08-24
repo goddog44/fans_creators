@@ -1512,7 +1512,7 @@ export const notificationService = {
 
   subscribeToUser(userId: string, onNotification: (notification: Notification) => void): () => void {
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}:${crypto.randomUUID()}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, ({ new: row }) => {
         onNotification({
           id: row.id,

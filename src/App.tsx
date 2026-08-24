@@ -118,6 +118,7 @@ function AppRoutes() {
       <Route path="/manager/revenue" element={<ProtectedRoute roles={['MANAGER']}><ManagerRevenue /></ProtectedRoute>} />
       <Route path="/manager/analytics" element={<ProtectedRoute roles={['MANAGER']}><ManagerAnalytics /></ProtectedRoute>} />
       <Route path="/manager/notifications" element={<ProtectedRoute roles={['MANAGER']}><ManagerNotifications /></ProtectedRoute>} />
+      <Route path="/manager/profile" element={<ProtectedRoute roles={['MANAGER']}><ManagerSettings /></ProtectedRoute>} />
       <Route path="/manager/settings" element={<ProtectedRoute roles={['MANAGER']}><ManagerSettings /></ProtectedRoute>} />
 
       {/* Admin */}
@@ -132,6 +133,7 @@ function AppRoutes() {
       <Route path="/admin/reports" element={<ProtectedRoute roles={['ADMIN']}><AdminReports /></ProtectedRoute>} />
       <Route path="/admin/moderation" element={<ProtectedRoute roles={['ADMIN']}><AdminModeration /></ProtectedRoute>} />
       <Route path="/admin/notifications" element={<ProtectedRoute roles={['ADMIN']}><AdminNotifications /></ProtectedRoute>} />
+      <Route path="/admin/profile" element={<ProtectedRoute roles={['ADMIN']}><UserProfile /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute roles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
       <Route path="/admin/audit-logs" element={<ProtectedRoute roles={['ADMIN']}><AdminAuditLogs /></ProtectedRoute>} />
 
