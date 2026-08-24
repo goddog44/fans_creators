@@ -5,8 +5,11 @@ import { modelService } from '@/services';
 import { ModelCard } from '@/components/shared/ModelCard';
 import { useEffect, useState } from 'react';
 import type { User } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { roleHomeRoute } from '@/lib/rbac';
 
 export function LandingPage() {
+  const { user } = useAuth();
   const [trending, setTrending] = useState<User[]>([]);
   const [heroSlide, setHeroSlide] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
@@ -35,8 +38,14 @@ export function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link to="/explore"><Button variant="ghost" size="sm">Explore</Button></Link>
-            <Link to="/login"><Button variant="outline" size="sm">Sign in</Button></Link>
-            <Link to="/register"><Button size="sm">Get started</Button></Link>
+            {user ? (
+              <Link to={roleHomeRoute[user.role]}><Button variant="outline" size="sm">Home</Button></Link>
+            ) : (
+              <>
+                <Link to="/login"><Button variant="outline" size="sm">Sign in</Button></Link>
+                <Link to="/register"><Button size="sm">Get started</Button></Link>
+              </>
+            )}
           </div>
         </div>
       </nav>

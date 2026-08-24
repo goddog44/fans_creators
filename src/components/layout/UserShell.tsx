@@ -42,7 +42,7 @@ export function UserShell({ children }: { children: ReactNode }) {
       {/* Top header */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <NavLink to="/home" className="flex items-center gap-2">
+          <NavLink to="/" className="flex items-center gap-2">
             <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-8 h-8 rounded-lg" />
             <span className="font-display font-bold text-lg text-ink-900 hidden sm:block">CreatorHub</span>
           </NavLink>

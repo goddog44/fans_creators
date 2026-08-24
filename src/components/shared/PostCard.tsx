@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, Share2, DollarSign, Lock, MoreHorizontal, BadgeCheck, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Share2, DollarSign, Lock, MoreHorizontal, BadgeCheck, ChevronLeft, ChevronRight, Maximize2, ImageOff } from 'lucide-react';
 import type { Post, User, Comment as PostComment } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -37,8 +37,11 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const [mediaIndex, setMediaIndex] = useState(0);
   const [fullscreenMedia, setFullscreenMedia] = useState(false);
+  const [mediaFailed, setMediaFailed] = useState<Record<number, boolean>>({});
 
   const isLocked = post.visibility !== 'PUBLIC' && !isSubscribed;
+  const currentMedia = post.media?.[mediaIndex];
+  const currentMediaFailed = mediaFailed[mediaIndex];
 
   const handleLike = async () => {
     if (!currentUser) {
@@ -52,10 +55,8 @@ export function PostCard({ post, model, currentUser, isSubscribed, onUnlock }: P
     setLikeCount((c) => (nextLiked ? c + 1 : c - 1));
     try {
       const actuallyLiked = await contentService.toggleLike(post.id);
-      // Reconcile in case of a race with another session/tab.
       setLiked(actuallyLiked);
     } catch (err) {
-      // Revert on failure
       setLiked(!nextLiked);
       setLikeCount((c) => (nextLiked ? c - 1 : c + 1));
       toast(err instanceof Error ? err.message : 'Failed to update like', 'error');

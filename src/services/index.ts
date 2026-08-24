@@ -170,10 +170,14 @@ export const authService = {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) return null;
 
+    return this.getUserProfile(data.user.id);
+  },
+
+  async getUserProfile(userId: string): Promise<User | null> {
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', data.user.id)
+      .eq('id', userId)
       .single();
 
     return profile ? mapProfile(profile) : null;

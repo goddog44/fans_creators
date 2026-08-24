@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, TrendingUp, Sparkles, Clock } from 'lucide-react';
 import { modelService } from '@/services';
 import type { User } from '@/types';
 import { ModelCard } from '@/components/shared/ModelCard';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
 import { Tabs, useTabs } from '@/components/ui/Tabs';
 import { LoadingState, EmptyState } from '@/components/ui/States';
+import { useAuth } from '@/context/AuthContext';
 
 export function ExplorePage() {
+  const { user } = useAuth();
   const [trending, setTrending] = useState<User[]>([]);
   const [newest, setNewest] = useState<User[]>([]);
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -37,11 +42,29 @@ export function ExplorePage() {
     <div className="min-h-screen bg-ink-50">
       <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-ink-200">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <img src="/image-removebg-preview.png" alt="CreatorHub" className="w-8 h-8 rounded-lg" />
             <span className="font-display font-bold text-lg text-ink-900">CreatorHub</span>
-          </a>
-          <a href="/login" className="text-sm font-semibold text-brand-600 hover:text-brand-700">Sign in</a>
+          </Link>
+
+          {user ? (
+            <Link
+              to={user.role === 'USER' ? '/feed' : '/dashboard'}
+              className="flex items-center gap-2"
+            >
+              <Avatar src={user.avatar} size="sm" />
+              <span className="text-sm font-semibold text-ink-900">{user.name}</span>
+            </Link>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link to="/login">
+                <Button variant="ghost" size="sm">Sign in</Button>
+              </Link>
+              <Link to="/register">
+                <Button size="sm">Get started</Button>
+              </Link>
+            </div>
+          )}
         </div>
       </nav>
 

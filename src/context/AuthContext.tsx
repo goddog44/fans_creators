@@ -23,35 +23,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth state from Supabase session
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error('Failed to initialize auth:', error);
-      } finally {
-        setLoading(false);
+    let disposed = false;
+    let syncVersion = 0;
+
+    const syncSession = (session: { user: { id: string } } | null, clearWhenMissing = false) => {
+      const version = ++syncVersion;
+
+      if (!session?.user) {
+        if (!disposed) {
+          if (clearWhenMissing) setUser(null);
+          setLoading(false);
+        }
+        return;
       }
+
+      void authService.getUserProfile(session.user.id).then((currentUser) => {
+        if (!disposed && version === syncVersion) {
+          setUser((previousUser) => currentUser || previousUser);
+          setLoading(false);
+        }
+      }).catch((error) => {
+        if (!disposed && version === syncVersion) {
+          console.error('Failed to fetch user profile:', error);
+          setLoading(false);
+        }
+      });
     };
 
-    initializeAuth();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncSession(session, _event === 'SIGNED_OUT' || _event === 'INITIAL_SESSION');
+    });
 
-    // Listen for auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        try {
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-        } catch (error) {
-          console.error('Failed to fetch user profile:', error);
-          setUser(null);
-        }
-      } else {
-        setUser(null);
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!disposed) syncSession(data.session, true);
+    }).catch((error) => {
+      if (!disposed) {
+        console.error('Failed to initialize auth:', error);
+        setLoading(false);
       }
     });
 
     return () => {
+      disposed = true;
       listener?.subscription.unsubscribe();
     };
   }, []);
