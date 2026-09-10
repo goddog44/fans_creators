@@ -96,14 +96,17 @@ export function UserLivePage() {
               const creator = creators[stream.modelId];
               const isSelected = selected?.id === stream.id;
               return (
-                <button key={stream.id} type="button" onClick={() => navigate(`/live/${stream.id}`)} className={`w-full rounded-2xl border p-4 text-left transition ${isSelected ? 'border-brand-500 bg-brand-50' : 'border-ink-200 bg-white hover:border-brand-300'}`}>
-                  <div className="flex items-center gap-3">
+                <button key={stream.id} type="button" onClick={() => navigate(`/live/${stream.id}`)} className={`w-full overflow-hidden rounded-2xl border text-left transition ${isSelected ? 'border-brand-500 bg-brand-50' : 'border-ink-200 bg-white hover:border-brand-300'}`}>
+                  <div className="relative aspect-video bg-gradient-to-br from-ink-900 via-brand-900 to-ink-800">
+                    {stream.thumbnailUrl && <img src={stream.thumbnailUrl} alt="" className="h-full w-full object-cover" />}
+                    <span className="absolute left-3 top-3 rounded-full bg-danger-600 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white">Live</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-4">
                     <img src={creator?.avatar || '/image-removebg-preview.png'} alt="" className="h-12 w-12 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
                       <p className="truncate font-semibold text-ink-900">{stream.title}</p>
                       <p className="text-xs text-ink-500">{creator?.name || 'Creator'} · {stream.viewerCount} watching</p>
                     </div>
-                    <span className="rounded-full bg-danger-100 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-danger-700">Live</span>
                   </div>
                 </button>
               );
