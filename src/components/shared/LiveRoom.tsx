@@ -30,6 +30,73 @@ type LiveEvent =
   | { type: 'reaction'; senderId: string }
   | { type: 'invite'; senderId: string };
 
+type MediaKind = 'camera' | 'microphone';
+
+interface CreatorMediaResult {
+  stream: MediaStream;
+  message?: string;
+}
+
+const mediaErrorMessage = (error: unknown, kind: MediaKind): string => {
+  const name = error instanceof DOMException ? error.name : '';
+  const label = kind === 'camera' ? 'caméra' : 'microphone';
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return `L'accès au ${label} a été refusé. Autorisez le ${label} dans les réglages du navigateur puis rechargez la page.`;
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return `Aucun ${label} n'a été détecté sur cet appareil.`;
+  if (name === 'NotReadableError' || name === 'TrackStartError') return `Le ${label} est déjà utilisé ou ne peut pas être démarré.`;
+  if (name === 'OverconstrainedError') return `Les contraintes demandées pour le ${label} ne sont pas compatibles avec cet appareil.`;
+  return `Le ${label} n'est pas disponible.`;
+};
+
+const requestCreatorMedia = async (): Promise<CreatorMediaResult> => {
+  if (!window.isSecureContext) {
+    return {
+      stream: new MediaStream(),
+      message: "La caméra et le microphone nécessitent HTTPS. Ouvrez CreatorHub avec https:// ou utilisez http://localhost en développement.",
+    };
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return {
+      stream: new MediaStream(),
+      message: "Ce navigateur ne prend pas en charge l'accès à la caméra et au microphone.",
+    };
+  }
+
+  try {
+    return { stream: await navigator.mediaDevices.getUserMedia({ video: true, audio: true }) };
+  } catch (combinedError) {
+    let cameraStream: MediaStream | null = null;
+    let microphoneStream: MediaStream | null = null;
+    let cameraError: unknown = combinedError;
+    let microphoneError: unknown = combinedError;
+
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    } catch (error) {
+      cameraError = error;
+    }
+
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+    } catch (error) {
+      microphoneError = error;
+    }
+
+    const stream = new MediaStream([
+      ...(cameraStream?.getVideoTracks() || []),
+      ...(microphoneStream?.getAudioTracks() || []),
+    ]);
+    if (stream.getTracks().length > 0) {
+      const missing: string[] = [];
+      if (!cameraStream?.getVideoTracks().length) missing.push(mediaErrorMessage(cameraError, 'camera'));
+      if (!microphoneStream?.getAudioTracks().length) missing.push(mediaErrorMessage(microphoneError, 'microphone'));
+      return { stream, message: missing.join(' ') };
+    }
+
+    return { stream, message: `${mediaErrorMessage(cameraError, 'camera')} ${mediaErrorMessage(microphoneError, 'microphone')}` };
+  }
+};
+
 const newPeerId = () => `peer-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 const copyText = async (text: string): Promise<void> => {
@@ -62,6 +129,9 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [hasCameraTrack, setHasCameraTrack] = useState(false);
+  const [hasAudioTrack, setHasAudioTrack] = useState(false);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
@@ -150,15 +220,15 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
       if (status !== 'SUBSCRIBED' || cancelled) return;
       setConnected(host);
       if (host) {
-        try {
-          const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          if (cancelled) return;
-          localStreamRef.current = media;
-          if (localVideoRef.current) localVideoRef.current.srcObject = media;
-          setCameraError(null);
-        } catch {
-          setCameraError('Caméra ou microphone indisponible. Sur mobile, HTTPS est requis pour autoriser la caméra.');
-        }
+        const result = await requestCreatorMedia();
+        if (cancelled) return;
+        localStreamRef.current = result.stream;
+        if (localVideoRef.current) localVideoRef.current.srcObject = result.stream;
+        setCameraError(result.message || null);
+        setHasCameraTrack(result.stream.getVideoTracks().length > 0);
+        setHasAudioTrack(result.stream.getAudioTracks().length > 0);
+        setCameraEnabled(result.stream.getVideoTracks().length > 0);
+        setAudioEnabled(result.stream.getAudioTracks().length > 0);
       } else {
         send({ type: 'join', senderId: peerId.current });
       }
@@ -206,6 +276,7 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
     if (!track) return;
     track.enabled = !track.enabled;
     setMuted(!track.enabled);
+    setAudioEnabled(track.enabled);
   };
 
   const toggleVideo = () => {
@@ -231,7 +302,7 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
           <div className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs text-white">{stream.viewerCount} spectateurs</div>
         </div>
         <div className="flex flex-wrap items-center gap-2 p-3">
-          {host && <><Button size="icon" variant="secondary" onClick={toggleAudio} title={muted ? 'Activer le microphone' : 'Couper le microphone'}>{muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button><Button size="icon" variant="secondary" onClick={toggleVideo} title={cameraEnabled ? 'Couper la caméra' : 'Activer la caméra'}>{cameraEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}</Button><Button size="sm" variant="danger" onClick={() => void endStream()}><PhoneOff className="h-4 w-4" /> Terminer</Button></>}
+          {host && <><Button size="icon" variant="secondary" onClick={toggleAudio} disabled={!hasAudioTrack} title={muted ? 'Activer le microphone' : 'Couper le microphone'}>{muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button><Button size="icon" variant="secondary" onClick={toggleVideo} disabled={!hasCameraTrack} title={cameraEnabled ? 'Couper la caméra' : 'Activer la caméra'}>{cameraEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}</Button><Button size="sm" variant="danger" onClick={() => void endStream()}><PhoneOff className="h-4 w-4" /> Terminer</Button></>}
           <Button size="sm" variant="secondary" onClick={sendReaction}><Heart className="h-4 w-4 text-danger-400" /> {likes}</Button>
           <Button size="sm" variant="secondary" onClick={() => void shareLive()}><Share2 className="h-4 w-4" /> Partager / inviter</Button>
           <Button size="sm" variant="secondary" onClick={() => void copyText(`${window.location.origin}/live/${stream.id}`).then(() => toast('Lien du live copié'))}><Copy className="h-4 w-4" /></Button>
