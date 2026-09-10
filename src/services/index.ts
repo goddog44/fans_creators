@@ -18,6 +18,7 @@ import type {
   Reel,
   ReelComment,
   LiveStream,
+  LiveChatMessage,
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -1728,6 +1729,7 @@ export const liveService = {
       endedAt: row.ended_at || undefined,
       thumbnailUrl: row.thumbnail_url || undefined,
       viewerCount: row.viewer_count || 0,
+      likesCount: row.likes_count || 0,
       createdAt: row.created_at,
     };
   },
@@ -1821,6 +1823,90 @@ export const liveService = {
       .eq('id', id);
 
     if (error) throw new Error(error.message);
+  },
+
+  async join(id: string): Promise<number> {
+    const { data, error } = await supabase.rpc('join_live_stream', { target_live_stream_id: id });
+    if (error) throw new Error(error.message);
+    return Number(data || 0);
+  },
+
+  async heartbeat(id: string): Promise<number> {
+    const { data, error } = await supabase.rpc('heartbeat_live_stream', { target_live_stream_id: id });
+    if (error) throw new Error(error.message);
+    return Number(data || 0);
+  },
+
+  async leave(id: string): Promise<number> {
+    const { data, error } = await supabase.rpc('leave_live_stream', { target_live_stream_id: id });
+    if (error) throw new Error(error.message);
+    return Number(data || 0);
+  },
+
+  async getEngagement(id: string): Promise<{ likesCount: number; liked: boolean; viewerCount: number }> {
+    const { data, error } = await supabase.rpc('get_live_engagement', { target_live_stream_id: id });
+    if (error) throw new Error(error.message);
+    const result = data as { likes_count?: number; liked?: boolean; viewer_count?: number };
+    return { likesCount: Number(result.likes_count || 0), liked: Boolean(result.liked), viewerCount: Number(result.viewer_count || 0) };
+  },
+
+  async toggleLike(id: string): Promise<{ liked: boolean; likesCount: number }> {
+    const { data, error } = await supabase.rpc('toggle_live_like', { target_live_stream_id: id });
+    if (error) throw new Error(error.message);
+    const result = data as { liked?: boolean; count?: number };
+    return { liked: Boolean(result.liked), likesCount: Number(result.count || 0) };
+  },
+
+  mapChatMessage(row: any): LiveChatMessage {
+    return {
+      id: row.id,
+      liveStreamId: row.live_stream_id,
+      userId: row.user_id,
+      userName: row.profiles?.name || 'Viewer',
+      userAvatar: row.profiles?.avatar_url || undefined,
+      text: row.text,
+      createdAt: row.created_at,
+    };
+  },
+
+  async getMessages(id: string): Promise<LiveChatMessage[]> {
+    const { data, error } = await supabase
+      .from('live_messages')
+      .select('id, live_stream_id, user_id, text, created_at, profiles:user_id (name, avatar_url)')
+      .eq('live_stream_id', id)
+      .order('created_at', { ascending: true })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return (data || []).map((row) => this.mapChatMessage(row));
+  },
+
+  async sendMessage(id: string, userId: string, text: string): Promise<LiveChatMessage> {
+    const { data, error } = await supabase
+      .from('live_messages')
+      .insert({ live_stream_id: id, user_id: userId, text: text.trim() })
+      .select('id, live_stream_id, user_id, text, created_at, profiles:user_id (name, avatar_url)')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.mapChatMessage(data);
+  },
+
+  subscribeToEngagement(id: string, onChange: (stream: LiveStream) => void): () => void {
+    const channel = supabase
+      .channel(`live-engagement:${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `id=eq.${id}` }, ({ new: row }) => onChange(this.mapLiveStream(row)))
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  },
+
+  subscribeToMessages(id: string, onMessage: (message: LiveChatMessage) => void): () => void {
+    const channel = supabase
+      .channel(`live-chat:${id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages', filter: `live_stream_id=eq.${id}` }, async ({ new: row }) => {
+        const { data } = await supabase.from('profiles').select('name, avatar_url').eq('id', row.user_id).single();
+        onMessage(this.mapChatMessage({ ...row, profiles: data }));
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
   },
 
   subscribeToLiveStreams(onChange: (stream: LiveStream) => void): () => void {

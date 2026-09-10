@@ -161,6 +161,17 @@ export interface LiveStream {
   endedAt?: string;
   thumbnailUrl?: string;
   viewerCount: number;
+  likesCount: number;
+  createdAt: string;
+}
+
+export interface LiveChatMessage {
+  id: string;
+  liveStreamId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  text: string;
   createdAt: string;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Radio, ArrowLeft } from 'lucide-react';
 import { RoleShell } from '@/components/layout/RoleShell';
@@ -17,9 +17,12 @@ export function UserLivePage() {
   const [streams, setStreams] = useState<LiveStream[]>([]);
   const [creators, setCreators] = useState<Record<string, User>>({});
   const [loading, setLoading] = useState(true);
+  const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
+    let active = true;
     void liveService.getActive().then(async (items) => {
+      if (!active) return;
       setStreams(items);
       const ids = [...new Set(items.map((item) => item.modelId))];
       if (ids.length === 0) {
@@ -33,16 +36,30 @@ export function UserLivePage() {
       });
       setCreators(map);
     }).finally(() => setLoading(false));
+    const unsubscribe = liveService.subscribeToLiveStreams((updated) => {
+      setStreams((current) => {
+        if (updated.status !== 'LIVE') return current.filter((item) => item.id !== updated.id);
+        const exists = current.some((item) => item.id === updated.id);
+        return exists ? current.map((item) => item.id === updated.id ? updated : item) : [updated, ...current];
+      });
+    });
+    return () => { active = false; unsubscribe(); };
   }, []);
 
   const selected = useMemo(() => {
     if (!id) return streams[0] ?? null;
     return streams.find((stream) => stream.id === id) ?? null;
   }, [id, streams]);
+  const selectedIndex = selected ? streams.findIndex((stream) => stream.id === selected.id) : -1;
+  const moveToLive = (direction: 1 | -1) => {
+    if (selectedIndex < 0) return;
+    const next = streams[selectedIndex + direction];
+    if (next) navigate(`/live/${next.id}`);
+  };
 
   return (
     <RoleShell>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 hidden items-center justify-between lg:flex">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-600">CreatorHub Live</p>
           <h1 className="font-display text-3xl font-bold text-ink-900">Free live streams</h1>
@@ -57,14 +74,23 @@ export function UserLivePage() {
       {loading ? <LoadingState /> : streams.length === 0 ? (
         <EmptyState title="No live streams right now" description="Check back soon for creators going live for free." icon={<Radio className="h-8 w-8" />} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div
+          className="-mx-4 -my-6 grid min-h-[calc(100dvh-4rem)] gap-6 bg-ink-950 p-0 lg:mx-0 lg:my-0 lg:min-h-0 lg:grid-cols-[1.2fr_0.8fr] lg:bg-transparent lg:p-0"
+          onTouchStart={(event) => { touchStartY.current = event.touches[0]?.clientY ?? null; }}
+          onTouchEnd={(event) => {
+            if (touchStartY.current === null) return;
+            const delta = event.changedTouches[0]?.clientY - touchStartY.current;
+            touchStartY.current = null;
+            if (Math.abs(delta) > 60) moveToLive(delta < 0 ? 1 : -1);
+          }}
+        >
           <Card>
-            <CardBody>
-              {selected && user && <LiveRoom stream={selected} currentUser={user} host={selected.modelId === user.id} onEnded={() => navigate('/live')} />}
+            <CardBody className="p-0 lg:p-5">
+              {selected && user && <LiveRoom stream={selected} currentUser={user} creator={creators[selected.modelId]} host={selected.modelId === user.id} onEnded={() => navigate('/live')} onLeave={() => navigate('/live')} />}
             </CardBody>
           </Card>
 
-          <div className="space-y-4">
+          <div className="hidden space-y-4 lg:block">
             <h2 className="font-display text-xl font-bold text-ink-900">Current rooms</h2>
             {streams.map((stream) => {
               const creator = creators[stream.modelId];

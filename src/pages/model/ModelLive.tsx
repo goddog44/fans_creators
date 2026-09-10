@@ -72,7 +72,7 @@ export function ModelLive() {
   return (
     <DashboardShell navItems={modelNavItems}>
       <PageHeader title="Live" subtitle="Go live for free and keep the room open for your audience" />
-      {activeStream && user && <div className="mb-6"><LiveRoom stream={activeStream} currentUser={user} host onEnded={() => setStreams((current) => current.map((item) => item.id === activeStream.id ? { ...item, status: 'ENDED', endedAt: new Date().toISOString() } : item))} /></div>}
+      {activeStream && user && <div className="mb-6"><LiveRoom stream={activeStream} currentUser={user} creator={user} host onEnded={() => setStreams((current) => current.map((item) => item.id === activeStream.id ? { ...item, status: 'ENDED', endedAt: new Date().toISOString() } : item))} /></div>}
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader><CardTitle>Start a free stream</CardTitle></CardHeader>

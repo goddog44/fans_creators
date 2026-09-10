@@ -1,24 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { Copy, Heart, MessageCircle, Mic, MicOff, PhoneOff, Share2, Video, VideoOff } from 'lucide-react';
+import { Copy, Heart, MessageCircle, Mic, MicOff, PhoneOff, Share2, Video, VideoOff, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/context/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { liveService } from '@/services';
-import type { LiveStream, User } from '@/types';
+import type { LiveChatMessage, LiveStream, User } from '@/types';
 
 interface LiveRoomProps {
   stream: LiveStream;
   currentUser: User;
   host: boolean;
+  creator?: User;
   onEnded?: () => void;
-}
-
-interface LiveMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  text: string;
+  onLeave?: () => void;
 }
 
 type LiveEvent =
@@ -26,7 +21,6 @@ type LiveEvent =
   | { type: 'offer'; senderId: string; targetId: string; description: RTCSessionDescriptionInit }
   | { type: 'answer'; senderId: string; targetId: string; description: RTCSessionDescriptionInit }
   | { type: 'candidate'; senderId: string; targetId: string; candidate: RTCIceCandidateInit }
-  | { type: 'message'; senderId: string; senderName: string; text: string }
   | { type: 'reaction'; senderId: string }
   | { type: 'invite'; senderId: string };
 
@@ -114,7 +108,7 @@ const copyText = async (text: string): Promise<void> => {
   area.remove();
 };
 
-export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) {
+export function LiveRoom({ stream, currentUser, host, creator = currentUser, onEnded, onLeave }: LiveRoomProps) {
   const { toast } = useToast();
   const peerId = useRef(newPeerId());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -123,13 +117,16 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
   const candidateQueue = useRef(new Map<string, RTCIceCandidateInit[]>());
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const viewerVideoRef = useRef<HTMLVideoElement>(null);
-  const [messages, setMessages] = useState<LiveMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<LiveChatMessage[]>([]);
   const [messageText, setMessageText] = useState('');
-  const [likes, setLikes] = useState(0);
+  const [likes, setLikes] = useState(stream.likesCount);
+  const [liked, setLiked] = useState(false);
+  const [viewerCount, setViewerCount] = useState(stream.viewerCount);
+  const [likeAnimating, setLikeAnimating] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [audioEnabled, setAudioEnabled] = useState(true);
   const [hasCameraTrack, setHasCameraTrack] = useState(false);
   const [hasAudioTrack, setHasAudioTrack] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -174,12 +171,7 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
 
     const handleEvent = async (event: LiveEvent) => {
       if (event.senderId === peerId.current) return;
-      if (event.type === 'message') {
-        setMessages((current) => [...current.slice(-49), { id: `${event.senderId}-${Date.now()}`, senderId: event.senderId, senderName: event.senderName, text: event.text }]);
-        return;
-      }
       if (event.type === 'reaction') {
-        setLikes((current) => current + 1);
         return;
       }
       if (event.type === 'invite') return;
@@ -228,7 +220,6 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
         setHasCameraTrack(result.stream.getVideoTracks().length > 0);
         setHasAudioTrack(result.stream.getAudioTracks().length > 0);
         setCameraEnabled(result.stream.getVideoTracks().length > 0);
-        setAudioEnabled(result.stream.getAudioTracks().length > 0);
       } else {
         send({ type: 'join', senderId: peerId.current });
       }
@@ -243,18 +234,65 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
     };
   }, [host, stream.id]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    let active = true;
+    let heartbeat: number | undefined;
+    void Promise.all([liveService.getEngagement(stream.id), liveService.getMessages(stream.id)]).then(([engagement, initialMessages]) => {
+      if (!active) return;
+      setLikes(engagement.likesCount);
+      setLiked(engagement.liked);
+      setViewerCount(engagement.viewerCount);
+      setMessages(initialMessages);
+    }).catch(() => undefined);
+
+    if (!host) {
+      void liveService.join(stream.id).then((count) => { if (active) setViewerCount(count); }).catch(() => undefined);
+      heartbeat = window.setInterval(() => {
+        void liveService.heartbeat(stream.id).then((count) => { if (active) setViewerCount(count); }).catch(() => undefined);
+      }, 15000);
+    }
+
+    const unsubscribeEngagement = liveService.subscribeToEngagement(stream.id, (updated) => {
+      if (active) {
+        setViewerCount(updated.viewerCount);
+        setLikes(updated.likesCount);
+      }
+    });
+    const unsubscribeMessages = liveService.subscribeToMessages(stream.id, (message) => {
+      if (active) setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current.slice(-99), message]);
+    });
+
+    return () => {
+      active = false;
+      if (heartbeat !== undefined) window.clearInterval(heartbeat);
+      unsubscribeEngagement();
+      unsubscribeMessages();
+      if (!host) void liveService.leave(stream.id).catch(() => undefined);
+    };
+  }, [host, stream.id]);
+
   const sendMessage = () => {
     const text = messageText.trim();
     if (!text) return;
-    const payload: LiveEvent = { type: 'message', senderId: peerId.current, senderName: currentUser.name, text };
-    setMessages((current) => [...current.slice(-49), { id: `${peerId.current}-${Date.now()}`, senderId: peerId.current, senderName: currentUser.name, text }]);
-    void channelRef.current?.send({ type: 'broadcast', event: 'live', payload });
-    setMessageText('');
+    void liveService.sendMessage(stream.id, currentUser.id, text).then((message) => {
+      setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current.slice(-99), message]);
+      setMessageText('');
+    }).catch((error) => toast(error instanceof Error ? error.message : 'Impossible d’envoyer le commentaire', 'error'));
   };
 
   const sendReaction = () => {
-    setLikes((current) => current + 1);
-    void channelRef.current?.send({ type: 'broadcast', event: 'live', payload: { type: 'reaction', senderId: peerId.current } satisfies LiveEvent });
+    if (likeAnimating) return;
+    setLikeAnimating(true);
+    void liveService.toggleLike(stream.id).then((result) => {
+      setLiked(result.liked);
+      setLikes(result.likesCount);
+    }).catch((error) => toast(error instanceof Error ? error.message : 'Impossible de mettre à jour le like', 'error')).finally(() => {
+      window.setTimeout(() => setLikeAnimating(false), 450);
+    });
   };
 
   const shareLive = async () => {
@@ -276,7 +314,6 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
     if (!track) return;
     track.enabled = !track.enabled;
     setMuted(!track.enabled);
-    setAudioEnabled(track.enabled);
   };
 
   const toggleVideo = () => {
@@ -292,27 +329,33 @@ export function LiveRoom({ stream, currentUser, host, onEnded }: LiveRoomProps) 
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <section className="overflow-hidden rounded-2xl bg-black shadow-card">
-        <div className="relative aspect-video bg-ink-950">
+    <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <section className="overflow-hidden rounded-none bg-black shadow-card lg:rounded-2xl">
+        <div className="relative aspect-[9/16] min-h-[min(78dvh,48rem)] bg-ink-950 lg:aspect-video lg:min-h-0">
           {host ? <video ref={localVideoRef} autoPlay muted playsInline className="h-full w-full object-cover" /> : <video ref={viewerVideoRef} autoPlay playsInline className="h-full w-full object-cover" />}
           {!host && !connected && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-white">Connexion au flux vidéo...</div>}
           {host && cameraError && <div className="absolute inset-x-4 bottom-4 rounded-xl bg-danger-700/90 p-3 text-sm text-white">{cameraError}</div>}
           <div className="absolute left-4 top-4 rounded-full bg-danger-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">Live</div>
-          <div className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs text-white">{stream.viewerCount} spectateurs</div>
+          <div className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs text-white">{viewerCount} spectateurs</div>
+        </div>
+        <div className="flex items-center gap-3 border-t border-ink-800 bg-ink-950 px-4 py-3 text-white">
+          <img src={creator.avatar || '/image-removebg-preview.png'} alt="" className="h-10 w-10 rounded-full object-cover" />
+          <div className="min-w-0"><p className="truncate font-bold">{creator.name}</p><p className="truncate text-sm text-ink-300">{stream.title}</p></div>
         </div>
         <div className="flex flex-wrap items-center gap-2 p-3">
           {host && <><Button size="icon" variant="secondary" onClick={toggleAudio} disabled={!hasAudioTrack} title={muted ? 'Activer le microphone' : 'Couper le microphone'}>{muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</Button><Button size="icon" variant="secondary" onClick={toggleVideo} disabled={!hasCameraTrack} title={cameraEnabled ? 'Couper la caméra' : 'Activer la caméra'}>{cameraEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}</Button><Button size="sm" variant="danger" onClick={() => void endStream()}><PhoneOff className="h-4 w-4" /> Terminer</Button></>}
-          <Button size="sm" variant="secondary" onClick={sendReaction}><Heart className="h-4 w-4 text-danger-400" /> {likes}</Button>
+          {!host && <Button size="icon" variant="secondary" onClick={onLeave} title="Quitter le live" aria-label="Quitter le live"><X className="h-4 w-4" /></Button>}
+          <Button size="sm" variant={liked ? 'danger' : 'secondary'} onClick={sendReaction} className={likeAnimating ? 'animate-bounce' : ''}><Heart className="h-4 w-4" fill={liked ? 'currentColor' : 'none'} /> {likes}</Button>
           <Button size="sm" variant="secondary" onClick={() => void shareLive()}><Share2 className="h-4 w-4" /> Partager / inviter</Button>
           <Button size="sm" variant="secondary" onClick={() => void copyText(`${window.location.origin}/live/${stream.id}`).then(() => toast('Lien du live copié'))}><Copy className="h-4 w-4" /></Button>
         </div>
       </section>
-      <aside className="flex min-h-[24rem] flex-col rounded-2xl border border-ink-200 bg-white">
+      <aside className="flex max-h-[30dvh] min-h-[15rem] flex-col rounded-2xl border border-ink-200 bg-white lg:max-h-none lg:min-h-[24rem]">
         <div className="flex items-center gap-2 border-b border-ink-100 p-4 font-semibold text-ink-900"><MessageCircle className="h-5 w-5 text-brand-600" /> Chat en direct</div>
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
           {messages.length === 0 && <p className="text-sm text-ink-500">Les commentaires du live apparaîtront ici.</p>}
-          {messages.map((message) => <p key={message.id} className="text-sm"><span className="font-bold text-brand-700">{message.senderName}</span> <span className="text-ink-700">{message.text}</span></p>)}
+          {messages.map((message) => <div key={message.id} className="flex gap-2 text-sm"><img src={message.userAvatar || '/image-removebg-preview.png'} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" /><p><span className="font-bold text-brand-700">{message.userName}</span> <span className="text-ink-700">{message.text}</span></p></div>)}
+          <div ref={messagesEndRef} />
         </div>
         <div className="flex gap-2 border-t border-ink-100 p-3"><Input value={messageText} onChange={(event) => setMessageText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') sendMessage(); }} placeholder="Écrire un commentaire..." maxLength={300} /><Button size="icon" onClick={sendMessage} aria-label="Envoyer"><MessageCircle className="h-4 w-4" /></Button></div>
       </aside>
