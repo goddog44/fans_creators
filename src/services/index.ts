@@ -17,8 +17,20 @@ import type {
   Story,
   Reel,
   ReelComment,
+  LiveStream,
 } from '@/types';
 import { supabase } from '@/lib/supabase';
+
+let fallbackIdCounter = 0;
+
+const generateId = (): string => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+
+  fallbackIdCounter += 1;
+  return `fallback-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${fallbackIdCounter.toString(36)}`;
+};
 
 // Helper to map database rows to User type
 const mapProfile = (row: any): User => ({
@@ -821,7 +833,7 @@ export const contentService = {
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) throw new Error('Only images and videos are allowed');
     if (file.size > 250 * 1024 * 1024) throw new Error('Media must be smaller than 250 MB');
     const ext = file.name.split('.').pop();
-    const path = `${modelId}/${postId || 'draft'}/${crypto.randomUUID()}.${ext}`;
+    const path = `${modelId}/${postId || 'draft'}/${generateId()}.${ext}`;
 
     const { error } = await supabase.storage.from('post-media').upload(path, file, {
       cacheControl: '3600',
@@ -1513,7 +1525,7 @@ export const notificationService = {
 
   subscribeToUser(userId: string, onNotification: (notification: Notification) => void): () => void {
     const channel = supabase
-      .channel(`notifications:${userId}:${crypto.randomUUID()}`)
+      .channel(`notifications:${userId}:${generateId()}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, ({ new: row }) => {
         onNotification({
           id: row.id,
@@ -1673,7 +1685,7 @@ export const storyService = {
     let mediaType: 'IMAGE' | 'VIDEO' | undefined;
     let storagePath: string | undefined;
     if (mediaFile) {
-      const uploaded = await contentService.uploadMedia(mediaFile, modelId, `story-${crypto.randomUUID()}`);
+      const uploaded = await contentService.uploadMedia(mediaFile, modelId, `story-${generateId()}`);
       mediaType = uploaded.type;
       storagePath = uploaded.storagePath;
     }
@@ -1700,6 +1712,126 @@ export const storyService = {
   async markViewed(storyId: string, userId: string): Promise<void> {
     const { error } = await supabase.from('story_views').upsert({ story_id: storyId, user_id: userId }, { onConflict: 'story_id,user_id' });
     if (error) throw new Error(error.message);
+  },
+};
+
+export const liveService = {
+  mapLiveStream(row: any): LiveStream {
+    return {
+      id: row.id,
+      modelId: row.model_id,
+      title: row.title || 'Live now',
+      description: row.description || '',
+      visibility: row.visibility || 'PUBLIC',
+      status: row.status || 'LIVE',
+      startedAt: row.started_at || undefined,
+      endedAt: row.ended_at || undefined,
+      thumbnailUrl: row.thumbnail_url || undefined,
+      viewerCount: row.viewer_count || 0,
+      createdAt: row.created_at,
+    };
+  },
+
+  async getActive(): Promise<LiveStream[]> {
+    const { data, error } = await supabase
+      .from('live_streams')
+      .select('*')
+      .in('status', ['LIVE', 'SCHEDULED'])
+      .order('started_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data || []).map((row) => this.mapLiveStream(row));
+  },
+
+  async getById(id: string): Promise<LiveStream | undefined> {
+    const { data, error } = await supabase
+      .from('live_streams')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data ? this.mapLiveStream(data) : undefined;
+  },
+
+  async getByModel(modelId: string): Promise<LiveStream[]> {
+    const { data, error } = await supabase
+      .from('live_streams')
+      .select('*')
+      .eq('model_id', modelId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data || []).map((row) => this.mapLiveStream(row));
+  },
+
+  async create(modelId: string, title: string, description: string, visibility: Visibility = 'PUBLIC', thumbnailUrl?: string): Promise<LiveStream> {
+    const { data, error } = await supabase
+      .from('live_streams')
+      .insert({
+        model_id: modelId,
+        title: title.trim() || 'Live now',
+        description: description.trim(),
+        visibility,
+        status: 'LIVE',
+        started_at: new Date().toISOString(),
+        thumbnail_url: thumbnailUrl || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return this.mapLiveStream(data);
+  },
+
+  async update(id: string, updates: Partial<Pick<LiveStream, 'title' | 'description' | 'visibility' | 'status' | 'thumbnailUrl'>>): Promise<LiveStream> {
+    const payload: Record<string, unknown> = {};
+    if (updates.title !== undefined) payload.title = updates.title;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.visibility !== undefined) payload.visibility = updates.visibility;
+    if (updates.status !== undefined) payload.status = updates.status;
+    if (updates.thumbnailUrl !== undefined) payload.thumbnail_url = updates.thumbnailUrl || null;
+    if (updates.status === 'ENDED') payload.ended_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('live_streams')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return this.mapLiveStream(data);
+  },
+
+  async end(id: string): Promise<LiveStream> {
+    return this.update(id, { status: 'ENDED' });
+  },
+
+  async start(modelId: string, title: string, description: string, visibility: Visibility = 'PUBLIC', thumbnailUrl?: string): Promise<LiveStream> {
+    const existing = await this.getByModel(modelId).then((streams) => streams.find((stream) => stream.status === 'LIVE'));
+    if (existing) return existing;
+    return this.create(modelId, title, description, visibility, thumbnailUrl);
+  },
+
+  async updateViewerCount(id: string, viewerCount: number): Promise<void> {
+    const { error } = await supabase
+      .from('live_streams')
+      .update({ viewer_count: Math.max(0, viewerCount) })
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+  },
+
+  subscribeToLiveStreams(onChange: (stream: LiveStream) => void): () => void {
+    const channel = supabase
+      .channel(`live-streams:${generateId()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_streams' }, ({ new: row }) => {
+        if (row) onChange(this.mapLiveStream(row));
+      })
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
   },
 };
 
@@ -1745,7 +1877,7 @@ export const reelService = {
 
   async create(modelId: string, file: File, caption: string, hashtags: string[], visibility: Visibility): Promise<Reel> {
     if (!file.type.startsWith('video/')) throw new Error('A Reel must be a video');
-    const uploaded = await contentService.uploadMedia(file, modelId, `reel-${crypto.randomUUID()}`);
+    const uploaded = await contentService.uploadMedia(file, modelId, `reel-${generateId()}`);
     const { data, error } = await supabase.from('reels').insert({ model_id: modelId, caption, hashtags, visibility, storage_path: uploaded.storagePath }).select().single();
     if (error) {
       await supabase.storage.from('post-media').remove([uploaded.storagePath]);

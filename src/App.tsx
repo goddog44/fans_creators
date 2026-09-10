@@ -25,6 +25,7 @@ import { ReelsPage } from '@/pages/user/ReelsPage';
 import { PostPage } from '@/pages/user/PostPage';
 import { StoryPage } from '@/pages/user/StoryPage';
 import { UserStories } from '@/pages/user/UserStories';
+import { UserLivePage } from '@/pages/user/UserLivePage';
 
 // Model
 import { ModelDashboard } from '@/pages/model/ModelDashboard';
@@ -38,6 +39,7 @@ import { ModelAnalytics } from '@/pages/model/ModelAnalytics';
 import { ModelNotifications } from '@/pages/model/ModelNotifications';
 import { ModelProfileSettings } from '@/pages/model/ModelProfileSettings';
 import { ModelSettings } from '@/pages/model/ModelSettings';
+import { ModelLive } from '@/pages/model/ModelLive';
 
 // Manager
 import { ManagerDashboard } from '@/pages/manager/ManagerDashboard';
@@ -84,6 +86,8 @@ function AppRoutes() {
       <Route path="/reels/:id" element={<ProtectedRoute roles={allRoles}><ReelsPage /></ProtectedRoute>} />
       <Route path="/story/:id" element={<ProtectedRoute roles={allRoles}><StoryPage /></ProtectedRoute>} />
       <Route path="/stories" element={<ProtectedRoute roles={allRoles}><UserStories /></ProtectedRoute>} />
+      <Route path="/live" element={<ProtectedRoute roles={allRoles}><UserLivePage /></ProtectedRoute>} />
+      <Route path="/live/:id" element={<ProtectedRoute roles={allRoles}><UserLivePage /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -106,6 +110,7 @@ function AppRoutes() {
       <Route path="/model" element={<ProtectedRoute roles={['MODEL']}><ModelDashboard /></ProtectedRoute>} />
       <Route path="/model/content" element={<ProtectedRoute roles={['MODEL']}><ModelContent /></ProtectedRoute>} />
       <Route path="/model/stories" element={<ProtectedRoute roles={['MODEL']}><ModelStories /></ProtectedRoute>} />
+      <Route path="/model/live" element={<ProtectedRoute roles={['MODEL']}><ModelLive /></ProtectedRoute>} />
       <Route path="/model/reels" element={<ProtectedRoute roles={['MODEL']}><ModelReels /></ProtectedRoute>} />
       <Route path="/model/subscribers" element={<ProtectedRoute roles={['MODEL']}><ModelSubscribers /></ProtectedRoute>} />
       <Route path="/model/messages" element={<ProtectedRoute roles={['MODEL']}><ModelMessages /></ProtectedRoute>} />

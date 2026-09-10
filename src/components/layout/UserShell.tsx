@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Compass, CreditCard, MessageSquare, Bell, Bookmark, User, Search, LogOut, Clapperboard, CirclePlay } from 'lucide-react';
+import { Home, Compass, CreditCard, MessageSquare, Bell, Bookmark, User, Search, LogOut, Clapperboard, CirclePlay, Radio } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/context/ToastContext';
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/home', label: 'Home', icon: Home },
   { to: '/explore', label: 'Explore', icon: Compass },
   { to: '/reels', label: 'Reels', icon: Clapperboard },
+  { to: '/live', label: 'Live', icon: Radio },
   { to: '/stories', label: 'Stories', icon: CirclePlay },
   { to: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
   { to: '/messages', label: 'Messages', icon: MessageSquare },
@@ -20,6 +21,7 @@ const navItems = [
 const bottomNavItems = [
   { to: '/home', label: 'Home', icon: Home },
   { to: '/explore', label: 'Explore', icon: Compass },
+  { to: '/live', label: 'Live', icon: Radio },
   { to: '/subscriptions', label: 'Subs', icon: CreditCard },
   { to: '/messages', label: 'Messages', icon: MessageSquare },
   { to: '/profile', label: 'Profile', icon: User },

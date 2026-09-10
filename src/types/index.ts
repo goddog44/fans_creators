@@ -14,6 +14,8 @@ export type TransactionStatus = 'COMPLETED' | 'PENDING' | 'FAILED' | 'REFUNDED';
 
 export type PayoutStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
 
+export type LiveStreamStatus = 'LIVE' | 'ENDED' | 'SCHEDULED';
+
 export type ReportStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'REJECTED';
 
 export type ReportReason = 'HARASSMENT' | 'EXPLICIT_CONTENT' | 'SPAM' | 'FRAUD' | 'COPYRIGHT' | 'OTHER';
@@ -43,7 +45,9 @@ export type NotificationType =
   | 'NEW_REPORT'
   | 'VERIFICATION'
   | 'TRANSACTION_ISSUE'
-  | 'PAYOUT_ATTENTION';
+  | 'PAYOUT_ATTENTION'
+  | 'LIVE_STREAM_STARTED'
+  | 'LIVE_STREAM_ENDED';
 
 export type MessageType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'PPV';
 
@@ -144,6 +148,20 @@ export interface ReelComment extends Comment {
   parentId?: string;
   likes: number;
   likedByUser?: boolean;
+}
+
+export interface LiveStream {
+  id: string;
+  modelId: string;
+  title: string;
+  description: string;
+  visibility: Visibility;
+  status: LiveStreamStatus;
+  startedAt?: string;
+  endedAt?: string;
+  thumbnailUrl?: string;
+  viewerCount: number;
+  createdAt: string;
 }
 
 export interface Subscription {
